@@ -1,6 +1,7 @@
 """Train + evaluate the small U-Net.
 
-  python -m lungseg.train --data phantom --epochs 30          # runs offline
+  python -m lungseg.train --data phantom --epochs 30          # 2D, runs offline
+  python -m lungseg.train --data phantom --dim 3 --batch 2    # 3D U-Net
   python -m lungseg.train --data msd --root data/Task06_Lung  # real CT tumors
   python -m lungseg.train --data png --root data/cxr          # CXR lung masks
 """
@@ -17,7 +18,7 @@ from torch.utils.data import DataLoader
 from . import data as D
 from .losses import DiceCELoss
 from .metrics import dice, hd95, iou, lesion_detection, precision, sensitivity
-from .model import SmallUNet, count_parameters
+from .model import SmallUNet, SmallUNet3D, count_parameters
 from .reconstruct3d import postprocess, predict_volume, reconstruct
 
 
@@ -100,11 +101,14 @@ def main(argv=None):
     ap.add_argument("--epochs", type=int, default=30)
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--lr", type=float, default=2e-3)
-    ap.add_argument("--base", type=int, default=16)
+    ap.add_argument("--dim", type=int, choices=[2, 3], default=2, help="2D slice U-Net or 3D U-Net")
+    ap.add_argument("--base", type=int, default=None, help="base width (default 16 for 2D, 12 for 3D)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
     args = ap.parse_args(argv)
 
+    if args.base is None:
+        args.base = 12 if args.dim == 3 else 16
     seed_all(args.seed)
     torch.set_num_threads(max(1, os.cpu_count() or 1))
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -112,10 +116,14 @@ def main(argv=None):
     (trv, trs), (vav, vas), (tev, tes) = load(args)
     print(f"cases train/val/test = {len(trv)}/{len(vav)}/{len(tev)}")
 
-    model = SmallUNet(base=args.base).to(device)
-    print(f"SmallUNet params: {count_parameters(model):,}")
-    dl = DataLoader(D.SliceDataset(trv, augment=True, seed=args.seed), batch_size=args.batch,
-                    shuffle=True, num_workers=args.workers, drop_last=True)
+    if args.dim == 3:
+        model = SmallUNet3D(base=args.base).to(device)
+        ds = D.PatchDataset3D(trv, patch=(min(32, args.depth_slices), 96, 96), seed=args.seed)
+    else:
+        model = SmallUNet(base=args.base).to(device)
+        ds = D.SliceDataset(trv, augment=True, seed=args.seed)
+    print(f"{type(model).__name__} params: {count_parameters(model):,}")
+    dl = DataLoader(ds, batch_size=args.batch, shuffle=True, num_workers=args.workers, drop_last=True)
     crit = DiceCELoss(ce_weight=[0.5, 1.0, 3.0]).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, args.lr, total_steps=args.epochs * len(dl))

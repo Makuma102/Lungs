@@ -13,11 +13,31 @@ import torch
 from scipy import ndimage
 from skimage import measure
 
+from .model import SmallUNet3D
+
+
+def _pad_to(vol, mult):
+    pads = [(0, (-s) % m) for s, m in zip(vol.shape, mult)]
+    return np.pad(vol, pads, mode="edge"), vol.shape
+
+
+@torch.no_grad()
+def _predict_3d(model, vol, device):
+    """Whole-volume 3D inference (padded to the network's stride) with flip TTA."""
+    depth = len(model.enc)
+    v, shape = _pad_to(vol, (2 ** (depth - 1), 2 ** depth, 2 ** depth))
+    x = torch.from_numpy(v[None, None]).float().to(device)
+    p = (model(x).softmax(1) + model(x.flip(-1)).softmax(1).flip(-1)) / 2
+    p = p[0, :, :shape[0], :shape[1], :shape[2]].cpu().numpy()
+    return p.argmax(0).astype(np.uint8), p[2]
+
 
 @torch.no_grad()
 def predict_volume(model, vol, batch=16, device="cpu"):
     """vol: [D,H,W] in [0,1]. Returns (labels [D,H,W] uint8, tumor prob [D,H,W])."""
     model.eval()
+    if isinstance(model, SmallUNet3D):
+        return _predict_3d(model, vol, device)
     probs = []
     for i in range(0, vol.shape[0], batch):
         x = torch.from_numpy(vol[i:i + batch, None]).float().to(device)

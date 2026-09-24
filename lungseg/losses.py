@@ -15,11 +15,12 @@ class DiceCELoss(nn.Module):
     def forward(self, logits, target):
         ce = F.cross_entropy(logits, target, weight=self.ce_weight)
         probs = logits.softmax(1)
-        onehot = F.one_hot(target, self.num_classes).permute(0, 3, 1, 2).float()
+        onehot = F.one_hot(target, self.num_classes).movedim(-1, 1).float()
         start = 0 if self.include_background else 1
         p, g = probs[:, start:], onehot[:, start:]
         # batch-level soft Dice: stable when a class is absent in some slices
-        inter = (p * g).sum((0, 2, 3))
-        denom = p.sum((0, 2, 3)) + g.sum((0, 2, 3))
+        dims = (0,) + tuple(range(2, logits.ndim))  # works for 2D and 3D
+        inter = (p * g).sum(dims)
+        denom = p.sum(dims) + g.sum(dims)
         dice = (2 * inter + self.smooth) / (denom + self.smooth)
         return ce + (1 - dice.mean())

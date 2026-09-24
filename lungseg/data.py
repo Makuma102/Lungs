@@ -197,3 +197,42 @@ def load_png_pairs(image_dir, mask_dir, size=256, mask_suffix=""):
         m = np.asarray(Image.open(cands[0]).convert("L").resize((size, size), Image.NEAREST)) > 127
         out.append((img[None], m[None].astype(np.uint8)))
     return out
+
+
+class PatchDataset3D(Dataset):
+    """Random 3D patches for the 3D U-Net. `samples_per_volume` patches per case
+    per epoch; with prob `tumor_oversample` the patch is centred on a tumor voxel
+    (nnU-Net style foreground oversampling)."""
+
+    def __init__(self, volumes, patch=(32, 96, 96), samples_per_volume=4, augment=True,
+                 tumor_oversample=0.5, seed=0):
+        self.volumes, self.patch, self.spv = volumes, patch, samples_per_volume
+        self.augment, self.tumor_oversample = augment, tumor_oversample
+        self.tumor_vox = [np.argwhere(lab == 2) for _, lab in volumes]
+        self.rng = np.random.default_rng(seed)
+
+    def __len__(self):
+        return len(self.volumes) * self.spv
+
+    def __getitem__(self, i):
+        img, lab = self.volumes[i // self.spv]
+        tv = self.tumor_vox[i // self.spv]
+        pad = [(0, max(0, p - s)) for p, s in zip(self.patch, img.shape)]
+        img, lab = np.pad(img, pad, mode="edge"), np.pad(lab, pad)
+        if len(tv) and self.rng.random() < self.tumor_oversample:
+            c = tv[self.rng.integers(len(tv))]
+            start = [int(np.clip(ci - p // 2 + self.rng.integers(-p // 4, p // 4 + 1), 0, s - p))
+                     for ci, p, s in zip(c, self.patch, img.shape)]
+        else:
+            start = [int(self.rng.integers(0, s - p + 1)) for p, s in zip(self.patch, img.shape)]
+        sl = tuple(slice(a, a + p) for a, p in zip(start, self.patch))
+        x, y = img[sl].copy(), lab[sl].copy()
+        if self.augment:
+            if self.rng.random() < 0.5:
+                x, y = x[:, :, ::-1], y[:, :, ::-1]
+            if self.rng.random() < 0.5:
+                x = np.clip(x, 0, 1) ** self.rng.uniform(0.7, 1.5)
+                x = x * self.rng.uniform(0.9, 1.1) + self.rng.uniform(-0.05, 0.05)
+                x = x + self.rng.normal(0, 0.02, x.shape)
+        return (torch.from_numpy(np.ascontiguousarray(x, np.float32)[None]),
+                torch.from_numpy(np.ascontiguousarray(y).astype(np.int64)))

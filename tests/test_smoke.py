@@ -63,3 +63,25 @@ def test_train_cli_end_to_end(tmp_path):
     res = main(["--epochs", "1", "--size", "64", "--depth-slices", "8", "--n-train", "2",
                 "--n-val", "1", "--n-test", "1", "--batch", "4", "--base", "8", "--out", str(tmp_path)])
     assert "lung_dice" in res and os.path.exists(tmp_path / "results.json")
+
+
+def test_unet3d_shapes_and_loss():
+    from lungseg.model import SmallUNet3D
+    m = SmallUNet3D(base=4)
+    x = torch.zeros(1, 1, 16, 32, 32)
+    out = m(x)
+    assert out.shape == (1, 3, 16, 32, 32)
+    DiceCELoss()(out, torch.zeros(1, 16, 32, 32, dtype=torch.long)).backward()
+
+
+def test_patch_dataset3d():
+    vols = D.make_phantom_volumes(1, (16, 64, 64), seed=3)
+    x, y = D.PatchDataset3D(vols, patch=(8, 32, 32))[0]
+    assert x.shape == (1, 8, 32, 32) and y.shape == (8, 32, 32)
+
+
+def test_train_cli_3d(tmp_path):
+    from lungseg.train import main
+    res = main(["--dim", "3", "--epochs", "1", "--size", "96", "--depth-slices", "16", "--n-train", "2",
+                "--n-val", "1", "--n-test", "1", "--batch", "2", "--base", "4", "--out", str(tmp_path)])
+    assert "lung_dice" in res and os.path.exists(tmp_path / "case0.obj")

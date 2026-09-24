@@ -39,9 +39,9 @@
     0.4812910339365464,
     0.7091992152429704
    ],
-   "lesion_sensitivity": 0.8571428571428571,
+   "lesion_sensitivity": 0.7857142857142857,
    "fp_per_scan": 1.9230769230769231,
-   "case_detection_rate": 0.9230769230769231,
+   "case_detection_rate": 0.8461538461538461,
    "volume_abs_err_ml": [
     16.92545630770234,
     1.791271844078027,
@@ -70,9 +70,9 @@
     0.0,
     0.3805676697434138
    ],
-   "lesion_sensitivity": 0.14285714285714285,
+   "lesion_sensitivity": 0.07142857142857142,
    "fp_per_scan": 0.8461538461538461,
-   "case_detection_rate": 0.15384615384615385,
+   "case_detection_rate": 0.07692307692307693,
    "volume_abs_err_ml": [
     27.297664575588247,
     8.21026271810652,
@@ -132,9 +132,9 @@
     0.587264720511068,
     0.8450920440844677
    ],
-   "lesion_sensitivity": 0.8571428571428571,
+   "lesion_sensitivity": 0.7857142857142857,
    "fp_per_scan": 0.07692307692307693,
-   "case_detection_rate": 0.9230769230769231,
+   "case_detection_rate": 0.8461538461538461,
    "volume_abs_err_ml": [
     15.901954289601402,
     2.049458150224503,
@@ -171,7 +171,8 @@
     "fp": 3,
     "vol_gt_ml": 12.60239809155464,
     "vol_pred_ml": 10.944768795132637,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -183,7 +184,8 @@
     "fp": 0,
     "vol_gt_ml": 12.60239809155464,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.7748212206885082,
@@ -195,7 +197,8 @@
     "fp": 0,
     "vol_gt_ml": 12.60239809155464,
     "vol_pred_ml": 9.522629565238953,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -207,7 +210,8 @@
     "fp": 1,
     "vol_gt_ml": 12.60239809155464,
     "vol_pred_ml": 0.2833239862918854,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9416055704969973
   },
@@ -223,7 +227,8 @@
     "fp": 2,
     "vol_gt_ml": 28.578580932199955,
     "vol_pred_ml": 24.004935773193836,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -235,7 +240,8 @@
     "fp": 0,
     "vol_gt_ml": 28.578580932199955,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.7596136382399076,
@@ -247,19 +253,21 @@
     "fp": 0,
     "vol_gt_ml": 28.578580932199955,
     "vol_pred_ml": 22.15453611087799,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.1330305351866039,
     "hd95": 29.147414866514612,
     "sens": 0.07125479965999355,
     "prec": 1.0,
-    "tp": 1,
-    "fn": 0,
+    "tp": 0,
+    "fn": 1,
     "fp": 0,
     "vol_gt_ml": 28.578580932199955,
     "vol_pred_ml": 2.0363610588908196,
-    "detected": true
+    "detected": false,
+    "touched": true
    },
    "ceiling_dice": 0.9477877531891211
   },
@@ -275,7 +283,8 @@
     "fp": 0,
     "vol_gt_ml": 3.4943653049468995,
     "vol_pred_ml": 6.329752443313598,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -287,7 +296,8 @@
     "fp": 0,
     "vol_gt_ml": 3.4943653049468995,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.6796591733139956,
@@ -299,7 +309,8 @@
     "fp": 0,
     "vol_gt_ml": 3.4943653049468995,
     "vol_pred_ml": 6.329752443313598,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -311,7 +322,8 @@
     "fp": 1,
     "vol_gt_ml": 3.4943653049468995,
     "vol_pred_ml": 0.4657372717857361,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9292024068621175
   },
@@ -327,7 +339,8 @@
     "fp": 5,
     "vol_gt_ml": 5.22003173828125,
     "vol_pred_ml": 4.78973388671875,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -339,7 +352,8 @@
     "fp": 0,
     "vol_gt_ml": 5.22003173828125,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.6790056251134096,
@@ -351,7 +365,8 @@
     "fp": 0,
     "vol_gt_ml": 5.22003173828125,
     "vol_pred_ml": 3.1890869140625,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -363,7 +378,8 @@
     "fp": 1,
     "vol_gt_ml": 5.22003173828125,
     "vol_pred_ml": 11.4898681640625,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9659224441833137
   },
@@ -379,7 +395,8 @@
     "fp": 3,
     "vol_gt_ml": 31.134679213911294,
     "vol_pred_ml": 53.23691032856703,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -391,7 +408,8 @@
     "fp": 0,
     "vol_gt_ml": 31.134679213911294,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.8518480076241519,
@@ -403,7 +421,8 @@
     "fp": 0,
     "vol_gt_ml": 31.134679213911294,
     "vol_pred_ml": 41.83755871191621,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.40278498149499353,
@@ -415,7 +434,8 @@
     "fp": 0,
     "vol_gt_ml": 31.134679213911294,
     "vol_pred_ml": 8.0278481772542,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "ceiling_dice": 0.9681092268587397
   },
@@ -426,12 +446,13 @@
     "hd95": 73.17409232507431,
     "sens": 0.004286493117077825,
     "prec": 0.6024904214559387,
-    "tp": 1,
-    "fn": 0,
+    "tp": 0,
+    "fn": 1,
     "fp": 3,
     "vol_gt_ml": 151.3409661602974,
     "vol_pred_ml": 1.0767341465950013,
-    "detected": true
+    "detected": false,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -443,19 +464,21 @@
     "fp": 0,
     "vol_gt_ml": 151.3409661602974,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.008536395035590932,
     "hd95": 72.7255488417275,
     "sens": 0.004286493117077825,
     "prec": 1.0,
-    "tp": 1,
-    "fn": 0,
+    "tp": 0,
+    "fn": 1,
     "fp": 0,
     "vol_gt_ml": 151.3409661602974,
     "vol_pred_ml": 0.6487220097780229,
-    "detected": true
+    "detected": false,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -467,7 +490,8 @@
     "fp": 1,
     "vol_gt_ml": 151.3409661602974,
     "vol_pred_ml": 0.9251250282526017,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9743460456115726
   },
@@ -483,7 +507,8 @@
     "fp": 2,
     "vol_gt_ml": 2.8306106643676756,
     "vol_pred_ml": 3.0585991802215573,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -495,7 +520,8 @@
     "fp": 0,
     "vol_gt_ml": 2.8306106643676756,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.7627981774323238,
@@ -507,7 +533,8 @@
     "fp": 0,
     "vol_gt_ml": 2.8306106643676756,
     "vol_pred_ml": 2.692929287910461,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -519,7 +546,8 @@
     "fp": 1,
     "vol_gt_ml": 2.8306106643676756,
     "vol_pred_ml": 2.422007869720459,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9316708229426434
   },
@@ -535,7 +563,8 @@
     "fp": 1,
     "vol_gt_ml": 5.664196065068245,
     "vol_pred_ml": 8.027361849665642,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -547,7 +576,8 @@
     "fp": 0,
     "vol_gt_ml": 5.664196065068245,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.7780213939273138,
@@ -559,7 +589,8 @@
     "fp": 0,
     "vol_gt_ml": 5.664196065068245,
     "vol_pred_ml": 7.9217505445480345,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -571,7 +602,8 @@
     "fp": 1,
     "vol_gt_ml": 5.664196065068245,
     "vol_pred_ml": 0.21122261023521424,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9576990866848262
   },
@@ -587,7 +619,8 @@
     "fp": 1,
     "vol_gt_ml": 0.7377379506826401,
     "vol_pred_ml": 0.7736320331692697,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "empty": {
     "dice": 0.0,
@@ -599,7 +632,8 @@
     "fp": 0,
     "vol_gt_ml": 0.7377379506826401,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.0,
@@ -611,7 +645,8 @@
     "fp": 1,
     "vol_gt_ml": 0.7377379506826401,
     "vol_pred_ml": 0.7736320331692697,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "threshold": {
     "dice": 0.0,
@@ -623,7 +658,8 @@
     "fp": 1,
     "vol_gt_ml": 0.7377379506826401,
     "vol_pred_ml": 28.633549673855306,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9303590859630033
   },
@@ -639,7 +675,8 @@
     "fp": 1,
     "vol_gt_ml": 1.5615297108888626,
     "vol_pred_ml": 2.3443877696990967,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -651,7 +688,8 @@
     "fp": 0,
     "vol_gt_ml": 1.5615297108888626,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.8029580152671756,
@@ -663,7 +701,8 @@
     "fp": 0,
     "vol_gt_ml": 1.5615297108888626,
     "vol_pred_ml": 1.9483536928892136,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -675,7 +714,8 @@
     "fp": 1,
     "vol_gt_ml": 1.5615297108888626,
     "vol_pred_ml": 0.21350674331188202,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.907182320441989
   },
@@ -691,7 +731,8 @@
     "fp": 1,
     "vol_gt_ml": 11.370135719299316,
     "vol_pred_ml": 10.686064247131348,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -703,7 +744,8 @@
     "fp": 0,
     "vol_gt_ml": 11.370135719299316,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.8780816697446722,
@@ -715,7 +757,8 @@
     "fp": 0,
     "vol_gt_ml": 11.370135719299316,
     "vol_pred_ml": 10.3982692527771,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -727,7 +770,8 @@
     "fp": 1,
     "vol_gt_ml": 11.370135719299316,
     "vol_pred_ml": 0.42690654373168946,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9399604631460039
   },
@@ -743,7 +787,8 @@
     "fp": 1,
     "vol_gt_ml": 89.47540438270569,
     "vol_pred_ml": 121.94087698841095,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -755,7 +800,8 @@
     "fp": 0,
     "vol_gt_ml": 89.47540438270569,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.7644609204036973,
@@ -767,7 +813,8 @@
     "fp": 0,
     "vol_gt_ml": 89.47540438270569,
     "vol_pred_ml": 116.55001205253602,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -779,7 +826,8 @@
     "fp": 1,
     "vol_gt_ml": 89.47540438270569,
     "vol_pred_ml": 3.1138995151519775,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9755985482918046
   },
@@ -795,7 +843,8 @@
     "fp": 2,
     "vol_gt_ml": 2.253713167905808,
     "vol_pred_ml": 3.861772074699402,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "empty": {
     "dice": 0.0,
@@ -807,7 +856,8 @@
     "fp": 0,
     "vol_gt_ml": 2.253713167905808,
     "vol_pred_ml": 0.0,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ours_sel": {
     "dice": 0.8112211221122112,
@@ -819,7 +869,8 @@
     "fp": 0,
     "vol_gt_ml": 2.253713167905808,
     "vol_pred_ml": 2.3494219172000887,
-    "detected": true
+    "detected": true,
+    "touched": true
    },
    "threshold": {
     "dice": 0.0,
@@ -831,7 +882,8 @@
     "fp": 1,
     "vol_gt_ml": 2.253713167905808,
     "vol_pred_ml": 3.0307770609855655,
-    "detected": false
+    "detected": false,
+    "touched": false
    },
    "ceiling_dice": 0.9241977450130096
   }

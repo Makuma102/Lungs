@@ -38,6 +38,7 @@ def main():
     ap.add_argument("--out", default="paper/fig")
     ap.add_argument("--views", default="A,tumor")
     ap.add_argument("--hide", default="", help="comma list of structure keys to hide")
+    ap.add_argument("--show", default="", help="comma list of structure keys to show (e.g. arteries,veins)")
     ap.add_argument("--opacity", type=float, default=None)
     ap.add_argument("--tag", default="")
     a = ap.parse_args()
@@ -67,6 +68,8 @@ def main():
             page.wait_for_function(f"document.getElementById('file').textContent.includes('{case}') && document.getElementById('loading').hidden", timeout=180000)
             for key in [k for k in a.hide.split(",") if k]:
                 page.evaluate(f"(() => {{ const e = document.getElementById('s-{key}'); if (e && e.checked) e.click(); }})()")
+            for key in [k for k in a.show.split(",") if k]:
+                page.evaluate(f"(() => {{ const e = document.getElementById('s-{key}'); if (e && !e.checked) e.click(); }})()")
             if a.opacity is not None:
                 page.evaluate(f"(() => {{ const e = document.getElementById('op'); e.value = {a.opacity}; e.dispatchEvent(new Event('input')); }})()")
             for v in a.views.split(","):

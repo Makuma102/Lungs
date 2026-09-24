@@ -2,7 +2,7 @@
 
 Combines:
   * lobes (5) and trachea          - TotalSegmentator `total` task (Wasserthal et al., Radiol AI 2023)
-  * bronchial tree + lung vessels  - TotalSegmentator `lung_vessels` task
+  * airways + pulmonary arteries + pulmonary veins - TotalSegmentator `lung_vessels` task
   * tumor                          - MSD Task06 expert label and/or our U-Net prediction
 and derives:
   * airway centreline (3D skeleton), branch points, terminal endpoints, and
@@ -40,8 +40,16 @@ def load_case(ct_path, anat_dir, tumor_path=None, pred_path=None):
     for lobe in LOBES:
         masks[lobe] = _load_mask(os.path.join(anat_dir, "total", lobe + ".nii.gz"), shape)
     masks["trachea"] = _load_mask(os.path.join(anat_dir, "total", "trachea.nii.gz"), shape)
-    masks["bronchi"] = _load_mask(os.path.join(anat_dir, "vessels", "lung_trachea_bronchia.nii.gz"), shape)
-    masks["vessels"] = _load_mask(os.path.join(anat_dir, "vessels", "lung_vessels.nii.gz"), shape)
+    v = os.path.join(anat_dir, "vessels")
+    # TotalSegmentator >= 2.x `lung_vessels` task: airways + arteries + veins;
+    # older releases wrote lung_trachea_bronchia + lung_vessels
+    masks["bronchi"] = _load_mask(os.path.join(v, "lung_airways.nii.gz"), shape)
+    if masks["bronchi"] is None:
+        masks["bronchi"] = _load_mask(os.path.join(v, "lung_trachea_bronchia.nii.gz"), shape)
+    masks["arteries"] = _load_mask(os.path.join(v, "lung_arteries.nii.gz"), shape)
+    masks["veins"] = _load_mask(os.path.join(v, "lung_veins.nii.gz"), shape)
+    if masks["arteries"] is None and masks["veins"] is None:
+        masks["vessels"] = _load_mask(os.path.join(v, "lung_vessels.nii.gz"), shape)
     if tumor_path:
         masks["tumor_gt"] = _load_mask(tumor_path, shape)
     if pred_path:
@@ -105,7 +113,24 @@ def centerline(airway, spacing, affine, min_branch_mm=5.0):
     # root = highest (most superior) skeleton point in the trachea
     ras = nib.affines.apply_affine(affine, pts)
     root = int(np.argmax(ras[:, 2]))
-    # BFS for generation: +1 each time we pass a branch point (deg >= 3)
+    # Junction voxels (degree >= 3) come in small clusters at each real
+    # bifurcation; merge each cluster into one node before counting.
+    is_bp = deg >= 3
+    cluster = -np.ones(len(pts), int)
+    nc = 0
+    for i in np.nonzero(is_bp)[0]:
+        if cluster[i] >= 0:
+            continue
+        stack = [i]
+        cluster[i] = nc
+        while stack:
+            k = stack.pop()
+            for j in nbrs[k]:
+                if is_bp[j] and cluster[j] < 0:
+                    cluster[j] = nc
+                    stack.append(j)
+        nc += 1
+    # BFS from the root: generation +1 on entering a new bifurcation cluster
     gen = -np.ones(len(pts), int)
     gen[root] = 0
     q = [root]
@@ -113,10 +138,12 @@ def centerline(airway, spacing, affine, min_branch_mm=5.0):
         i = q.pop(0)
         for j in nbrs[i]:
             if gen[j] < 0:
-                gen[j] = gen[i] + (1 if deg[i] >= 3 else 0)
+                enters = is_bp[j] and cluster[j] != cluster[i]
+                gen[j] = gen[i] + (1 if enters else 0)
                 q.append(j)
     ends = [int(i) for i in np.nonzero(deg == 1)[0] if i != root]
-    bps = [int(i) for i in np.nonzero(deg >= 3)[0]]
+    # one representative voxel per bifurcation cluster
+    bps = [int(np.nonzero(cluster == c)[0][0]) for c in range(nc)]
     return {
         "points": np.round(ras, 1).tolist(),
         "edges": [list(e) for e in edges],
@@ -124,6 +151,7 @@ def centerline(airway, spacing, affine, min_branch_mm=5.0):
         "branchpoints": bps,
         "generation": gen.tolist(),
         "max_generation": int(gen[ends].max()) if ends else 0,
+        "median_terminal_generation": float(np.median(gen[ends])) if ends else 0,
         "length_mm": float(sum(np.linalg.norm(ras[a] - ras[b]) for a, b in edges)),
     }
 
@@ -171,7 +199,7 @@ def write_obj(path, verts, faces, name):
 
 
 # triangle budget per structure for the web viewer (quadric decimation)
-WEB_TRIS = {"airway": 80000, "vessels": 160000, "tumor_gt": 15000, "tumor_pred": 15000}
+WEB_TRIS = {"airway": 60000, "vessels": 120000, "arteries": 70000, "veins": 70000, "tumor_gt": 15000, "tumor_pred": 15000}
 
 
 def decimate(verts, faces, target):
@@ -193,7 +221,7 @@ def web_mesh(verts, faces):
 # mesh resolution per structure: fine for thin airways/vessels, coarse for big lobes
 STEP = {"trachea": 1, "bronchi": 1, "airway": 1, "vessels": 1, "tumor_gt": 1, "tumor_pred": 1}
 # smoothing kernel per structure (mm): lobes come from a 3 mm model, vessels are thin
-SIGMA_MM = {"airway": 0.8, "vessels": 0.5, "tumor_gt": 0.7, "tumor_pred": 0.7}
+SIGMA_MM = {"airway": 0.8, "vessels": 0.5, "arteries": 0.5, "veins": 0.5, "tumor_gt": 0.7, "tumor_pred": 0.7}
 
 
 def build(ct_path, anat_dir, out_dir, tumor_path=None, pred_path=None):
@@ -217,7 +245,7 @@ def build(ct_path, anat_dir, out_dir, tumor_path=None, pred_path=None):
     if aw.any():
         cl = centerline(aw, zooms, aff)
         json.dump(cl, open(os.path.join(out_dir, "centerline.json"), "w"))
-        report["airway_tree"] = {k: cl[k] for k in ("max_generation", "length_mm")}
+        report["airway_tree"] = {k: cl[k] for k in ("max_generation", "median_terminal_generation", "length_mm")}
         report["airway_tree"].update(n_endpoints=len(cl["endpoints"]), n_branchpoints=len(cl["branchpoints"]))
     for t in ("tumor_gt", "tumor_pred"):
         if t in masks:

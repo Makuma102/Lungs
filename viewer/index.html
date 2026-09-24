@@ -136,6 +136,8 @@ const CAT = [
   ["Lungs", "lung_lower_lobe_left", "Left lower lobe", "#e6a0ab", "lobe"],
   ["Airway", "airway", "Trachea & bronchi", "#5f9e5b", "solid"],
   ["Airway", "centerline", "Centreline & endpoints", "#39d353", "line"],
+  ["Vessels", "arteries", "Pulmonary arteries", "#3f6fd1", "solid"],
+  ["Vessels", "veins", "Pulmonary veins", "#c8434a", "solid"],
   ["Vessels", "vessels", "Pulmonary vessels", "#b8474a", "solid"],
   ["Tumor", "tumor_gt", "Tumor, expert label", "#ff7a1a", "solid"],
   ["Tumor", "tumor_pred", "Tumor, 3D U-Net", "#ffd21f", "wire"],
@@ -206,7 +208,7 @@ function tree(){
   for (const [g, key, label, color] of CAT){
     if (!objs[key]) continue;
     if (g !== grp){ grp = g; const h = document.createElement("div"); h.className = "grp"; h.textContent = g; t.appendChild(h); }
-    if (!(key in state)) state[key] = key !== "vessels";
+    if (!(key in state)) state[key] = !["vessels", "arteries", "veins"].includes(key);
     const s = data.report.structures[key];
     const row = document.createElement("label"); row.className = "node" + (state[key] ? "" : " off");
     row.innerHTML = `<input type="checkbox" id="s-${key}" ${state[key] ? "checked" : ""}><span class="sw" style="background:${color}"></span><span class="n">${label}</span><span class="c">${s ? s.volume_ml.toFixed(s.volume_ml < 10 ? 2 : 0) + " mL" : ""}</span>`;
@@ -223,7 +225,7 @@ function report(r){
   const lungs = Object.entries(r.structures).filter(([k]) => k.startsWith("lung_"));
   const total = lungs.reduce((a, [, v]) => a + v.volume_ml, 0);
   dl($("scan"), [["Case", r.case.replace(".nii.gz", "")], ["Total lung volume", (total/1000).toFixed(2) + " L"],
-    ["Vessel volume", r.structures.vessels ? r.structures.vessels.volume_ml.toFixed(0) + " mL" : "–"]]);
+    ...["arteries", "veins", "vessels"].filter(k => r.structures[k]).map(k => [pretty(k) + " volume", r.structures[k].volume_ml.toFixed(0) + " mL"])]);
   dl($("lobes"), lungs.map(([k, v]) => [pretty(k), `${v.volume_ml.toFixed(0)} mL · ${(100*v.volume_ml/total).toFixed(0)}%`]));
   const a = r.airway_tree;
   dl($("airway"), a ? [["Centreline length", a.length_mm.toFixed(0) + " mm"], ["Branch points", a.n_branchpoints], ["Terminal endpoints", a.n_endpoints], ["Deepest generation", a.max_generation]] : [["Airway", "not segmented"]]);
@@ -239,7 +241,7 @@ function report(r){
   }
   if (r.pred_metrics) L.push(`<dl><dt>U-Net vs expert Dice</dt><dd>${fmt(r.pred_metrics.dice, 3)}</dd><dt>HD95</dt><dd>${fmt(r.pred_metrics.hd95_mm, 1)} mm</dd></dl>`);
   $("lesions").innerHTML = L.join("") || `<p class="note" style="border:0;padding:0">No tumor label.</p>`;
-  $("prov").textContent = "Real CT from the Medical Segmentation Decathlon (Task06 Lung, CC-BY-SA 4.0). Lobes, airway and vessels from TotalSegmentator; tumor from the expert label and our 3D U-Net. Research prototype, not for diagnosis.";
+  $("prov").textContent = "Real CT from the Medical Segmentation Decathlon (Task06 Lung, CC-BY-SA 4.0). Lobes, airways, arteries and veins from TotalSegmentator; tumor from the expert label and our 3D U-Net. Research prototype, not for diagnosis.";
 }
 
 const DIRS = {A:[0,1,0], P:[0,-1,0], R:[1,0,0], L:[-1,0,0], S:[0,0.001,1]};

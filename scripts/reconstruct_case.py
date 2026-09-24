@@ -49,7 +49,8 @@ def totalseg(ct, anat, vessels=True):
         subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "total"), "--fast",
                                "--roi_subset", *LOBE_ROI, "-d", "cpu"])
     out = os.path.join(anat, "vessels")
-    if vessels and not os.path.exists(os.path.join(out, "lung_vessels.nii.gz")):
+    if vessels and not (os.path.exists(os.path.join(out, "lung_airways.nii.gz"))
+                                or os.path.exists(os.path.join(out, "lung_vessels.nii.gz"))):
         # The full-resolution airway/vessel model needs >6 GB RAM on a whole
         # 512x512xN scan; crop to the lungs first, then paste results back.
         img, lo, hi = _lung_crop(ct, anat)

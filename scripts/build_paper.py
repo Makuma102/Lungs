@@ -129,19 +129,23 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
     table_ctrl = f"""
 <table><caption><b>Table 2.</b> False-success controls. A trustworthy result must sit well above the controls and below the ceiling.</caption>
 <thead><tr><th>Check</th><th>Tumor Dice</th><th>Interpretation</th></tr></thead><tbody>
-<tr><td>Ours vs. expert label</td><td>{ci(O['dice'])}</td><td>main result</td></tr>
+<tr><td>Ours vs. expert label (default)</td><td>{ci(O['dice'])}</td><td>main result</td></tr>
+{f"<tr><td>Ours vs. expert label (largest component)</td><td>{ci(OS['dice'])}</td><td>validation-selected rule</td></tr>" if OS else ""}
 <tr><td>Ours vs. <i>another patient's</i> label</td><td>{ci(S['shuffled_gt_dice'])}</td><td>should be ~0; high values would mean the metric rewards generic blobs</td></tr>
 <tr><td>Expert label &rarr; 1.5 mm grid &rarr; native</td><td>{ci(S['resampling_ceiling_dice'])}</td><td>upper bound imposed by our resampling</td></tr>
 <tr><td>HU-threshold baseline</td><td>{ci(T['dice'])}</td><td>what a trivial intensity rule achieves</td></tr>
 <tr><td>Empty prediction</td><td>{ci(E['dice'])}</td><td>must be exactly 0</td></tr>
 </tbody></table>"""
+    h = lambda x: "&infin;" if not np.isfinite(x) else f"{x:.1f}"
+    sel_cells = lambda r: (f"<td>{r['ours_sel']['dice']:.3f}</td><td>{h(r['ours_sel']['hd95'])}</td><td>{r['ours_sel']['fp']}</td>" if OS else "")
     pc_rows = "".join(
         f"<tr><td>{r['case']}</td><td>{r['ours']['vol_gt_ml']:.1f}</td><td>{r['ours']['vol_pred_ml']:.1f}</td><td>{r['ours']['dice']:.3f}</td>"
-        f"<td>{r['ours']['hd95']:.1f}</td><td>{r['ours']['tp']}/{r['ours']['tp'] + r['ours']['fn']}</td><td>{r['ours']['fp']}</td><td>{r['ceiling_dice']:.3f}</td></tr>"
+        f"<td>{h(r['ours']['hd95'])}</td><td>{r['ours']['tp']}/{r['ours']['tp'] + r['ours']['fn']}</td><td>{r['ours']['fp']}</td>{sel_cells(r)}<td>{r['ceiling_dice']:.3f}</td></tr>"
         for r in per_case)
     table_cases = f"""
-<table class="small"><caption><b>Table 3.</b> Per-patient results (test split), sorted by Dice. Volumes in mL; HD95 in mm (&infin; when nothing was predicted).</caption>
-<thead><tr><th>Case</th><th>GT vol.</th><th>Pred. vol.</th><th>Dice</th><th>HD95</th><th>Lesions found</th><th>FP</th><th>Ceiling</th></tr></thead><tbody>{pc_rows}</tbody></table>"""
+<table class="small"><caption><b>Table 3.</b> Per-patient results (test split), sorted by Dice (default rule). Volumes in mL; HD95 in mm (&infin; when nothing was predicted).</caption>
+<thead><tr><th rowspan="2">Case</th><th rowspan="2">GT vol.</th><th colspan="5">default post-processing</th>{'<th colspan="3">largest component</th>' if OS else ''}<th rowspan="2">Ceiling</th></tr>
+<tr><th>Pred. vol.</th><th>Dice</th><th>HD95</th><th>Lesions found</th><th>FP</th>{'<th>Dice</th><th>HD95</th><th>FP</th>' if OS else ''}</tr></thead><tbody>{pc_rows}</tbody></table>"""
 
     rec_rows = ""
     for c, r in recon.items():
@@ -159,7 +163,7 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
     phantom = ""
     if ph:
         t = ph["test"]
-        phantom = (f"On the synthetic phantom used for development (Appendix A) the 2D model reached lung Dice {t['lung_dice']['mean']:.3f} "
+        phantom = (f"On this phantom the 2D model reached lung Dice {t['lung_dice']['mean']:.3f} "
                    f"and tumor Dice {t['tumor_dice']['mean']:.3f}. These numbers only show that the code works; the phantom is far "
                    f"easier than real CT and we do not use it to support any claim.")
 
@@ -208,28 +212,27 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
 <p>The 3D U-Net has four resolution levels, base width {args['base']} (widths {args['base']}&ndash;{args['base']*16}) and {tr['params']:,} parameters. Each level has two 3&times;3&times;3 convolutions with InstanceNorm and LeakyReLU(0.01). Pooling is isotropic; upsampling uses transposed convolutions; the bottleneck has dropout 0.1. The loss is soft Dice over foreground classes (batch-level) plus cross-entropy with class weights (0.5, 1, 3). We train with AdamW (lr {args['lr']}, wd 10<sup>&minus;4</sup>), a one-cycle schedule, gradient clipping at 12 and batch {args['batch']}. Patches are {'&times;'.join(map(str, args['patch']))} voxels, {args['samples_per_volume']} per patient per epoch, {int(args['tumor_oversample']*100)}% centred on tumor voxels. Augmentations are left&ndash;right flip, gamma, contrast and Gaussian noise. We train for {args['epochs']} epochs (about {sec_per_ep/60:.0f} min per epoch on 4 CPU cores) and keep the checkpoint with the best validation mean Dice (lung and tumor), checked every {args['val_every']} epochs.</p>
 <h3>3.4 Inference</h3>
 <p>Inference uses a sliding window (patch 96&times;128&times;128, 50% overlap) with Gaussian importance weighting and flip test-time augmentation. Post-processing keeps the two largest lung components and removes tumor components under 20 mm<sup>3</sup> or outside the closed lung hull. Tumor probabilities are mapped back to the native grid by trilinear interpolation and thresholded at 0.5.</p>
-<h3>3.4b Post-processing selection</h3>
+<h3>3.5 Post-processing selection</h3>
 <p>{selection_text}</p>
-<h3>3.5 Anatomy-level reconstruction</h3>
+<h3>3.6 Anatomy-level reconstruction</h3>
 <p>Per patient, the five lobes and trachea come from TotalSegmentator's fast model, and the airway tree, pulmonary arteries and pulmonary veins from its <code>lung_vessels</code> model. We run the latter on a lung-cropped CT (about 44% of the voxels) to stay within 15 GB of RAM, then paste the result back. The airway is skeletonised in 3D, and terminal spurs shorter than 5 mm are pruned. The resulting graph gives branch points, terminal endpoints, centreline length and a Weibel-style generation count from the most superior tracheal point. Surfaces are extracted with marching cubes after Gaussian smoothing in physical units (2 mm for lobes, 0.5&ndash;0.8 mm for airway, vessels and tumor) and Taubin &lambda;|&mu; smoothing <a href="#r8">[8]</a>, then mapped to RAS millimetres. Each tumor is assigned to the lobe it overlaps most. Meshes are exported as OBJ (full resolution, for 3D Slicer) and as a decimated web bundle for our viewer.</p>
-<h3>3.6 Evaluation and false-success controls</h3>
+<h3>3.7 Evaluation and false-success controls</h3>
 <p>All test metrics are computed on the <i>native</i> CT grid against the original expert label. We report Dice, HD95 (mm, using the physical voxel spacing), voxel sensitivity and precision, lesion-level sensitivity and false-positive components per scan, case-level detection, and volume error. 95% confidence intervals come from 2000 bootstrap resamples over patients. Controls: (a) an <i>empty</i> predictor; (b) an <i>HU-threshold</i> baseline (soft tissue, &minus;300 to 200 HU, inside the closed lung hull but outside aerated lung, largest component); (c) a <i>shuffled-label</i> control, scoring our prediction for patient <i>i</i> against the label of patient <i>i</i>+1; and (d) the <i>resampling ceiling</i>, the expert label sent through our 1.5 mm pipeline and back. The automated test suite ({tests_line}) checks, among other things: empty-vs-non-empty masks give Dice 0 and infinite HD95, not NaN or 0; tumor-free cases do not inflate tumor Dice; an all-foreground predictor is penalised; an untrained network scores near zero; splits are disjoint and deterministic; sliding-window inference matches whole-volume inference exactly for a voxel-wise model; nodule volumes are physically correct under anisotropic spacing; and reconstructed tumor centroids match label centroids in RAS within 3 mm.</p></section>
 
 <section><h2>4&nbsp; Results</h2>
 {table_main}
 <p>The small 3D U-Net clearly beats the trivial threshold rule and every control (Tables 1&ndash;2). The shuffled-label control stays near zero, so the score reflects patient-specific localisation rather than generic tumor-like blobs. Performance depends strongly on tumor size: mean Dice was {md(big):.2f} for tumors &ge;5 mL (n = {len(big)}) and {md(small):.2f} for tumors &lt;5 mL (n = {len(small)}). Predicted and expert tumor volumes correlated with Pearson r = {O['volume_pearson_r']:.2f}, with mean absolute error {ci(O['volume_abs_err_ml'], 1)} mL (Fig. 2).</p>
 {table_ctrl}
-<figure>{img(os.path.join('results/msd', 'fig_dice_per_case.png'))}<figcaption><b>Figure 1.</b> Per-patient tumor Dice on the test split for our model and the threshold baseline; black ticks mark the resampling ceiling.</figcaption></figure>
-<div class="row"><figure class="half">{img(os.path.join('results/msd', 'fig_volume.png'))}<figcaption><b>Figure 2.</b> Predicted vs. expert tumor volume (symmetric log axes).</figcaption></figure>
+<figure>{img(os.path.join('results/msd', 'fig_dice_per_case.png'))}<figcaption><b>Figure 1.</b> Per-patient tumor Dice on the test split for our model (default post-processing) and the threshold baseline; black ticks mark the resampling ceiling.</figcaption></figure>
+<div class="row"><figure class="half">{img(os.path.join('results/msd', 'fig_volume.png'))}<figcaption><b>Figure 2.</b> Predicted (default post-processing) vs. expert tumor volume, symmetric log axes.</figcaption></figure>
 <figure class="half">{img(os.path.join(OUT, 'fig', 'fig_training.png'))}<figcaption><b>Figure 3.</b> Training loss and validation mean Dice.</figcaption></figure></div>
-<figure>{img(os.path.join('results/msd', 'fig_qualitative.png'))}<figcaption><b>Figure 4.</b> Best, median and worst test patients (axial slice with the largest tumor area). Orange: expert; cyan: 3D U-Net.</figcaption></figure>
+<figure>{img(os.path.join('results/msd', 'fig_qualitative.png'))}<figcaption><b>Figure 4.</b> Best, median and worst test patients (axial slice with the largest tumor area). Orange: expert; cyan: 3D U-Net (default post-processing).</figcaption></figure>
 {table_cases}
 <h3>4.1 Anatomy-level reconstruction</h3>
 <p>Figure 5 shows reconstructions from real CT. Lobes, airway tree with centreline and endpoints, arteries, veins and tumor are all in patient RAS coordinates, so they can be loaded straight into 3D Slicer or the web viewer. Table 4 summarises the derived anatomy.</p>
 {table_recon}
 <div class="row">{figs_recon}</div>
-<p class="figcap"><b>Figure 5.</b> Anatomy-level reconstructions (anterior view; patient right on the viewer's left). Lobes are translucent, airway green with centreline, tumor orange (expert) and yellow wireframe (3D U-Net).</p>
-<p>{phantom}</p></section>
+<p class="figcap"><b>Figure 5.</b> Anatomy-level reconstructions of held-out test patients (anterior view; patient right on the viewer's left). Lobes are translucent, airway green with centreline and red endpoints, tumor orange (expert) and yellow wireframe (3D U-Net, largest-component rule).</p></section>
 
 <section><h2>5&nbsp; Discussion</h2>
 <p><b>What the numbers mean.</b> nnU-Net reports roughly 0.7 Dice on this task <a href="#r2">[2]</a>, but on the official MSD test set (hidden labels). Ours is a {n_test}-patient internal split of the labelled data, so the two cannot be ranked against each other. Our model has about {tr['params']/1e6:.0f}M parameters and trained for {args['epochs']} short CPU epochs; nnU-Net's default is 1000 GPU epochs with a five-fold ensemble. We do not claim state-of-the-art accuracy. The value of this work is a transparent, bounded baseline. The controls show the score is real (shuffled labels near 0), non-trivial (above the threshold rule) and limited partly by our own resampling (the ceiling is below 1 for small tumors).</p>

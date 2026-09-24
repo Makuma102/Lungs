@@ -88,8 +88,9 @@ def summarize(rows):
     y, yh = [r["has_tumor_gt"] for r in rows], [r["has_tumor_pred"] for r in rows]
     tpc = sum(a and b for a, b in zip(y, yh)); tnc = sum((not a) and (not b) for a, b in zip(y, yh))
     out["case_accuracy"] = (tpc + tnc) / len(rows)
-    out["case_sensitivity"] = tpc / max(1, sum(y))
-    out["case_specificity"] = tnc / max(1, len(y) - sum(y))
+    # undefined (NaN), not 0, when a class is absent: e.g. MSD has no tumor-free scans
+    out["case_sensitivity"] = tpc / sum(y) if sum(y) else float("nan")
+    out["case_specificity"] = tnc / (len(y) - sum(y)) if len(y) - sum(y) else float("nan")
     return out
 
 

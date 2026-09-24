@@ -52,6 +52,16 @@ def test_both_empty_is_perfect_but_excluded_from_tumor_mean():
     assert s["tumor_dice"]["mean"] == pytest.approx(0.2)  # not 0.6
 
 
+def test_specificity_undefined_without_negatives():
+    """With no tumor-free scans, specificity is undefined - reporting 0 (or 1)
+    would be a fabricated number."""
+    base = {"lung_dice": 1, "lung_iou": 1, "lung_hd95": 0, "lung_sens": 1, "lung_prec": 1,
+            "tumor_dice": .5, "tumor_iou": .3, "tumor_hd95": 5, "tumor_sens": .5, "tumor_prec": .5,
+            "tp": 1, "fn": 0, "fp": 0, "has_tumor_gt": True, "has_tumor_pred": True}
+    s = summarize([base, dict(base)])
+    assert np.isnan(s["case_specificity"]) and s["case_sensitivity"] == 1.0
+
+
 def test_all_foreground_predictor_is_penalised():
     gt = _ball((32, 32, 32), (16, 16, 16), 3)
     everything = np.ones_like(gt)

@@ -1,4 +1,4 @@
-# Results: synthetic CT phantom (offline run)
+# Phantom sanity-check results (superseded; real-CT results are in paper/ and results/msd/)
 
 > These numbers come from synthetic data. The build sandbox could not reach Hugging Face, Kaggle or Zenodo. They show the pipeline works end to end. They are **not** clinical accuracy. Re-run on MSD Task06_Lung or LUNA16 before reporting anything.
 

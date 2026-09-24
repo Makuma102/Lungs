@@ -1,0 +1,20 @@
+{
+  "lung_volume_ml": 881.39,
+  "n_nodules": 1,
+  "suspicious": true,
+  "nodules": [
+    {
+      "id": 1,
+      "volume_ml": 15.64,
+      "equiv_diameter_mm": 31.03,
+      "centroid_zyx_mm": [
+        64.9,
+        101.8,
+        176.7
+      ],
+      "mean_prob": 0.993,
+      "size_band": ">=8mm"
+    }
+  ],
+  "disclaimer": "Research prototype, not a medical device. Not for diagnosis."
+}

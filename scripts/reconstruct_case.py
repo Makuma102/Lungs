@@ -91,8 +91,10 @@ def main():
         model.load_state_dict(st["model"])
         npz = os.path.join("data/prep", a.case + ".npz")
         d = np.load(npz)
+        sel_p = "results/msd/postproc_selection.json"
+        rule = json.load(open(sel_p))["selected"]["rule"] if os.path.exists(sel_p) else {}
         lab, prob = predict_volume(model, d["img"].astype(np.float32))
-        lab = postprocess(lab, tuple(d["spacing"]))
+        lab = postprocess(lab, tuple(d["spacing"]), tumor_prob=prob, **rule)
         prob = np.where(lab == 2, np.maximum(prob, 0.5), np.minimum(prob, 0.49))  # respect post-processing
         img = to_original_nifti(prob, npz, ct)
         os.makedirs(out, exist_ok=True)
@@ -101,7 +103,7 @@ def main():
         g = np.asanyarray(nib.load(gt).dataobj) > 0
         p = np.asanyarray(img.dataobj) > 0
         zooms = nib.load(ct).header.get_zooms()[:3]
-        metrics = {"dice": round(float(dice(p, g)), 4), "hd95_mm": round(float(hd95(p, g, zooms)), 2),
+        metrics = {"dice": round(float(dice(p, g)), 4), "hd95_mm": round(float(hd95(p, g, zooms)), 2), "postproc": rule,
                    "split": "test" if a.case in [args["cases"][i] for i in args["split"]["test"]] else "train/val"}
 
     rep = anatomy.build(ct, anat, out, gt, pred_path)

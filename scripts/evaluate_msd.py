@@ -82,7 +82,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="runs/msd3d/best.pt")
     ap.add_argument("--out", default="results/msd")
+    ap.add_argument("--postproc", default="results/msd/postproc_selection.json",
+                    help="validation-selected rule (scripts/select_postproc.py); evaluated alongside the default")
     a = ap.parse_args()
+    sel_rule = json.load(open(a.postproc))["selected"]["rule"] if os.path.exists(a.postproc) else None
     os.makedirs(a.out, exist_ok=True)
     st = torch.load(a.ckpt, weights_only=False)
     args = st["args"]
@@ -97,16 +100,21 @@ def main():
         ct_p = os.path.join(ROOT, "imagesTr", c + ".nii.gz")
         npz = os.path.join("data/prep", c + ".npz")
         d = np.load(npz)
-        lab, prob = predict_volume(model, d["img"].astype(np.float32))
-        lab = postprocess(lab, tuple(d["spacing"]))
-        prob = np.where(lab == 2, np.maximum(prob, 0.5), np.minimum(prob, 0.49))
-        p = np.asanyarray(to_original_nifti(prob, npz, ct_p).dataobj) > 0
+        raw, prob_raw = predict_volume(model, d["img"].astype(np.float32))
+
+        def native(rule):
+            lab = postprocess(raw, tuple(d["spacing"]), tumor_prob=prob_raw, **(rule or {}))
+            pr = np.where(lab == 2, np.maximum(prob_raw, 0.5), np.minimum(prob_raw, 0.49))
+            return np.asanyarray(to_original_nifti(pr, npz, ct_p).dataobj) > 0
+        p = native(None)
+        p_sel = native(sel_rule) if sel_rule else None
         ct = nib.load(ct_p)
         hu = np.asanyarray(ct.dataobj).astype(np.float32)
         zooms = ct.header.get_zooms()[:3]
         g = np.asanyarray(nib.load(ct_p.replace("imagesTr", "labelsTr")).dataobj) > 0
         ceil = np.asanyarray(to_original_nifti(d["lab"] == 2, npz, ct_p).dataobj) > 0
         r = {"case": c, "ours": case_metrics(p, g, zooms), "empty": case_metrics(np.zeros_like(g), g, zooms),
+             **({"ours_sel": case_metrics(p_sel, g, zooms)} if p_sel is not None else {}),
              "threshold": case_metrics(threshold_baseline(hu, zooms), g, zooms),
              "ceiling_dice": dice(ceil, g)}
         rows.append(r)
@@ -143,6 +151,7 @@ def main():
         "n_test": len(rows), "n_train": len(train_cases), "test_cases": test_cases,
         "params": count_parameters(model),
         "ours": agg("ours"), "threshold": agg("threshold"), "empty": agg("empty"),
+        **({"ours_sel": agg("ours_sel"), "selected_rule": sel_rule} if sel_rule else {}),
         "shuffled_gt_dice": boot_ci(shuffled),
         "resampling_ceiling_dice": boot_ci([r["ceiling_dice"] for r in rows]),
     }

@@ -73,7 +73,10 @@ def predict_volume(model, vol, batch=16, device="cpu"):
     return probs.argmax(1).astype(np.uint8), probs[:, 2]
 
 
-def postprocess(labels, spacing, min_tumor_mm3=20.0):
+def postprocess(labels, spacing, min_tumor_mm3=20.0, tumor_prob=None, min_mean_prob=0.0, largest_only=False):
+    """3D clean-up. Lungs: keep the 2 largest components. Tumor: keep components
+    inside the closed lung hull, >= min_tumor_mm3, with mean probability >=
+    min_mean_prob (needs tumor_prob), optionally only the largest one."""
     out = np.zeros_like(labels)
     lung = labels >= 1
     lab, n = ndimage.label(lung)
@@ -84,10 +87,19 @@ def postprocess(labels, spacing, min_tumor_mm3=20.0):
     tum = (labels == 2) & ndimage.binary_closing(lung, iterations=2)
     vox_mm3 = float(np.prod(spacing))
     lab, n = ndimage.label(tum)
+    keep = []
     for i in range(1, n + 1):
         comp = lab == i
-        if comp.sum() * vox_mm3 >= min_tumor_mm3:
-            out[comp] = 2
+        size = int(comp.sum())
+        if size * vox_mm3 < min_tumor_mm3:
+            continue
+        if tumor_prob is not None and min_mean_prob > 0 and tumor_prob[comp].mean() < min_mean_prob:
+            continue
+        keep.append((size, i))
+    if largest_only and keep:
+        keep = [max(keep)]
+    for _, i in keep:
+        out[lab == i] = 2
     return out
 
 

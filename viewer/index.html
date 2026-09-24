@@ -239,7 +239,8 @@ function report(r){
     }
     if (x.lesions.length > 3) L.push(`<p class="note" style="border:0;padding:0">+${x.lesions.length - 3} smaller lesions</p>`);
   }
-  if (r.pred_metrics) L.push(`<dl><dt>U-Net vs expert Dice</dt><dd>${fmt(r.pred_metrics.dice, 3)}</dd><dt>HD95</dt><dd>${fmt(r.pred_metrics.hd95_mm, 1)} mm</dd></dl>`);
+  if (r.pred_metrics) L.push(`<dl><dt>U-Net vs expert Dice</dt><dd>${fmt(r.pred_metrics.dice, 3)}</dd><dt>HD95</dt><dd>${fmt(r.pred_metrics.hd95_mm, 1)} mm</dd>
+    <dt>Split</dt><dd>${r.pred_metrics.split === "test" ? "held-out test" : "used in training"}</dd></dl>`);
   $("lesions").innerHTML = L.join("") || `<p class="note" style="border:0;padding:0">No tumor label.</p>`;
   $("prov").textContent = "Real CT from the Medical Segmentation Decathlon (Task06 Lung, CC-BY-SA 4.0). Lobes, airways, arteries and veins from TotalSegmentator; tumor from the expert label and our 3D U-Net. Research prototype, not for diagnosis.";
 }

@@ -230,3 +230,20 @@ def test_mesh_is_in_patient_space_and_tumor_is_in_lungs():
     reported = np.array(r["tumor_gt"]["lesions"][0]["centroid_ras_mm"])
     assert np.linalg.norm(c - reported) < 3.0
     assert r["tumor_gt"]["lobe"].startswith("lung_")
+
+
+def test_postprocess_options_largest_and_probability():
+    lab = np.zeros((20, 60, 60), np.uint8)
+    lab[2:18, 5:55, 5:28] = 1
+    lab[2:18, 5:55, 32:55] = 1
+    lab[5:12, 10:20, 10:20] = 2      # big component
+    lab[5:8, 40:44, 40:44] = 2       # small component
+    prob = np.zeros(lab.shape, np.float32)
+    prob[5:12, 10:20, 10:20] = 0.95
+    prob[5:8, 40:44, 40:44] = 0.6
+    both = postprocess(lab, (1, 1, 1), min_tumor_mm3=5)
+    assert (both[5:8, 40:44, 40:44] == 2).all() and (both[5:12, 10:20, 10:20] == 2).all()
+    big = postprocess(lab, (1, 1, 1), min_tumor_mm3=5, largest_only=True)
+    assert (big[5:8, 40:44, 40:44] != 2).all() and (big[5:12, 10:20, 10:20] == 2).all()
+    conf = postprocess(lab, (1, 1, 1), min_tumor_mm3=5, tumor_prob=prob, min_mean_prob=0.8)
+    assert (conf[5:8, 40:44, 40:44] != 2).all() and (conf[5:12, 10:20, 10:20] == 2).all()

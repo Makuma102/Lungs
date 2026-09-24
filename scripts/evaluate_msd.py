@@ -67,13 +67,12 @@ def threshold_baseline(hu, zooms):
     return lab == (np.argmax(sizes) + 1)
 
 
-def overlay(ax, ct, g, p, title):
-    z = int(np.argmax((g | p).sum((0, 1)))) if (g | p).any() else ct.shape[2] // 2
-    sl = np.rot90(np.clip(ct[:, :, z], -1000, 400))
-    ax.imshow(sl, cmap="gray")
-    for m, c in ((g, "#ff7a1a"), (p, "#2fd4ff")):
-        if m[:, :, z].any():
-            ax.contour(np.rot90(m[:, :, z]), levels=[0.5], colors=c, linewidths=1.2)
+def overlay(ax, ct2d, g2d, p2d, title):
+    """ct2d/g2d/p2d: the axial slice (x, y) with the largest tumor area."""
+    ax.imshow(np.rot90(np.clip(ct2d, -1000, 400)), cmap="gray")
+    for m, c in ((g2d, "#ff7a1a"), (p2d, "#2fd4ff")):
+        if m.any():
+            ax.contour(np.rot90(m), levels=[0.5], colors=c, linewidths=1.2)
     ax.set_title(title, fontsize=8)
     ax.axis("off")
 
@@ -82,6 +81,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="runs/msd3d/best.pt")
     ap.add_argument("--out", default="results/msd")
+    ap.add_argument("--max-cases", type=int, default=None, help="smoke-test on the first N test cases")
     ap.add_argument("--postproc", default="results/msd/postproc_selection.json",
                     help="validation-selected rule (scripts/select_postproc.py); evaluated alongside the default")
     a = ap.parse_args()
@@ -91,7 +91,7 @@ def main():
     args = st["args"]
     model = SmallUNet3D(base=args["base"], anisotropic=not args.get("isotropic", False))
     model.load_state_dict(st["model"])
-    test_cases = [args["cases"][i] for i in args["split"]["test"]]
+    test_cases = [args["cases"][i] for i in args["split"]["test"]][:a.max_cases]
     train_cases = [args["cases"][i] for i in args["split"]["train"]]
     assert not set(test_cases) & set(train_cases), "train/test leakage"
 
@@ -118,7 +118,11 @@ def main():
              "threshold": case_metrics(threshold_baseline(hu, zooms), g, zooms),
              "ceiling_dice": dice(ceil, g)}
         rows.append(r)
-        masks[c] = (hu, g, p)
+        # keep memory bounded: bit-packed masks for the shuffled control, one 2D slice for figures
+        z = int(np.argmax((g | p).sum((0, 1)))) if (g | p).any() else hu.shape[2] // 2
+        masks[c] = {"shape": g.shape, "g": np.packbits(g), "p": np.packbits(p),
+                    "slice": (hu[:, :, z].copy(), g[:, :, z].copy(), p[:, :, z].copy())}
+        del hu, ceil
         print(c, {k: round(v, 3) for k, v in r["ours"].items() if isinstance(v, float)}, flush=True)
 
     # shuffled-GT control: score each prediction against the next case's label
@@ -126,8 +130,9 @@ def main():
     shuffled = []
     for i, c in enumerate(test_cases):
         o = test_cases[(i + 1) % len(test_cases)]
-        _, _, p = masks[c]
-        _, g2, _ = masks[o]
+        unpack = lambda m, k: np.unpackbits(m[k], count=int(np.prod(m["shape"]))).reshape(m["shape"]).astype(bool)
+        p = unpack(masks[c], "p")
+        g2 = unpack(masks[o], "g")
         if p.shape == g2.shape:
             shuffled.append(dice(p, g2))
         else:
@@ -182,8 +187,7 @@ def main():
     picks = [order[-1], order[len(order) // 2], order[0]]
     fig, axs = plt.subplots(1, 3, figsize=(7, 2.6))
     for axx, r, tag in zip(axs, picks, ("best", "median", "worst")):
-        hu, g, p = masks[r["case"]]
-        overlay(axx, hu, g, p, f"{tag}: {r['case']}  Dice {r['ours']['dice']:.2f}")
+        overlay(axx, *masks[r["case"]]["slice"], f"{tag}: {r['case']}  Dice {r['ours']['dice']:.2f}")
     fig.suptitle("orange = expert label, cyan = 3D U-Net", fontsize=8)
     fig.tight_layout(); fig.savefig(os.path.join(a.out, "fig_qualitative.png"), dpi=200); plt.close(fig)
     print(json.dumps(summary, indent=1, default=float))

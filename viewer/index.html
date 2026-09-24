@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Lung Mesh Inspector</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,6 +18,7 @@
   --bg:#0d1216; --panel:#141b21; --panel-2:#1b242b; --line:#2a3640; --ink:#dde6ec; --ink-2:#8c9ca8;
   --accent:#4cc1d0; --viewport:#0e141a; --viewport-2:#1d2a36; --ok:#5cc47f; --hot:#ff8446;
 }
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font:13px/1.45 "IBM Plex Sans",system-ui,sans-serif}
 .app{display:grid;grid-template-columns:260px 1fr 290px;grid-template-rows:auto 1fr auto;height:100%;min-height:600px}
@@ -258,8 +260,11 @@ function setView(v){
 const tmp = new THREE.Vector3();
 function orient(){
   const w = vp.clientWidth, h = vp.clientHeight;
+  if (!box) return;
+  const half = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
   const put = (id, dir) => {
-    tmp.copy(controls.target).addScaledVector(new THREE.Vector3(...dir).applyEuler(root.rotation), radius * 0.95).project(camera);
+    const reach = Math.abs(dir[0]) * half.x * 1.12 + Math.abs(dir[2]) * half.z * 1.12;
+    tmp.set(0, 0, 0).addScaledVector(new THREE.Vector3(...dir).applyEuler(root.rotation), reach).project(camera);
     const el = $(id); el.style.left = (tmp.x * .5 + .5) * w + "px"; el.style.top = (-tmp.y * .5 + .5) * h + "px";
     el.hidden = tmp.z > 1;
   };
@@ -287,11 +292,14 @@ $("clip").oninput = e => {
 };
 document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => setView(b.dataset.view));
 
+let token = 0;
 async function load(c){
+  const my = ++token;
   $("loading").hidden = false; $("loading").textContent = `loading ${c}…`;
   try {
     const r = await fetch(`models/${c}.json`); if (!r.ok) throw new Error(r.status);
-    data = await r.json(); build(data); $("loading").hidden = true;
+    const d = await r.json(); if (my !== token) return;  // a newer selection superseded this one
+    data = d; build(data); $("loading").hidden = true;
     $("file").textContent = `MSD Task06_Lung · ${c} · real CT`;
   } catch (e){ $("loading").textContent = `Could not load ${c} (${e.message}).`; }
 }

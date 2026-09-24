@@ -29,13 +29,43 @@ LOBE_ROI = ["lung_upper_lobe_left", "lung_lower_lobe_left", "lung_upper_lobe_rig
             "lung_middle_lobe_right", "lung_lower_lobe_right", "trachea"]
 
 
+def _lung_crop(ct, anat, margin_mm=15):
+    """Bounding box of the lobes (+ trachea) in voxel indices, with a margin."""
+    img = nib.load(ct)
+    m = np.zeros(img.shape, bool)
+    for r in LOBE_ROI:
+        p = os.path.join(anat, "total", r + ".nii.gz")
+        if os.path.exists(p):
+            m |= np.asanyarray(nib.load(p).dataobj) > 0
+    nz = np.argwhere(m)
+    pad = np.ceil(margin_mm / np.array(img.header.get_zooms()[:3])).astype(int)
+    lo = np.maximum(nz.min(0) - pad, 0)
+    hi = np.minimum(nz.max(0) + pad + 1, img.shape)
+    return img, lo, hi
+
+
 def totalseg(ct, anat, vessels=True):
     if not os.path.exists(os.path.join(anat, "total", "trachea.nii.gz")):
         subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "total"), "--fast",
                                "--roi_subset", *LOBE_ROI, "-d", "cpu"])
-    if vessels and not os.path.exists(os.path.join(anat, "vessels", "lung_vessels.nii.gz")):
-        subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "vessels"),
-                               "-ta", "lung_vessels", "-d", "cpu"])
+    out = os.path.join(anat, "vessels")
+    if vessels and not os.path.exists(os.path.join(out, "lung_vessels.nii.gz")):
+        # The full-resolution airway/vessel model needs >6 GB RAM on a whole
+        # 512x512xN scan; crop to the lungs first, then paste results back.
+        img, lo, hi = _lung_crop(ct, anat)
+        crop_ct = os.path.join(anat, "ct_lungcrop.nii.gz")
+        nib.save(img.slicer[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], crop_ct)
+        tmp = os.path.join(anat, "vessels_crop")
+        subprocess.check_call(["TotalSegmentator", "-i", crop_ct, "-o", tmp, "-ta", "lung_vessels",
+                               "-d", "cpu", "--nr_thr_resamp", "1", "--nr_thr_saving", "1"])
+        os.makedirs(out, exist_ok=True)
+        for f in os.listdir(tmp):
+            c = np.asanyarray(nib.load(os.path.join(tmp, f)).dataobj)
+            full = np.zeros(img.shape, np.uint8)
+            full[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]] = c > 0
+            nib.save(nib.Nifti1Image(full, img.affine), os.path.join(out, f))
+        shutil.rmtree(tmp)
+        os.remove(crop_ct)
 
 
 def main():

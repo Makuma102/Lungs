@@ -115,6 +115,7 @@ def main(argv=None):
     ap.add_argument("--base", type=int, default=None, help="base width (default 16 for 2D, 12 for 3D)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--val-every", type=int, default=1)
     args = ap.parse_args(argv)
 
     if args.base is None:
@@ -149,11 +150,15 @@ def main(argv=None):
             opt.zero_grad(); loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 12.0)
             opt.step(); sched.step(); tot += loss.item()
+        if (ep + 1) % args.val_every and ep != args.epochs - 1:
+            print(f"ep {ep:3d} loss {tot / len(dl):.4f} ({time.time() - t0:.0f}s)", flush=True)
+            log.append({"epoch": ep, "loss": tot / len(dl), "sec": time.time() - t0})
+            continue
         s = summarize(evaluate(model, vav, vas, device))
         score = (s["lung_dice"]["mean"] + s.get("tumor_dice", {"mean": 0})["mean"]) / 2
         log.append({"epoch": ep, "loss": tot / len(dl), "val_score": score, "sec": time.time() - t0})
         print(f"ep {ep:3d} loss {tot / len(dl):.4f} val lung {s['lung_dice']['mean']:.3f} "
-              f"tumor {s.get('tumor_dice', {'mean': float('nan')})['mean']:.3f} ({time.time() - t0:.0f}s)")
+              f"tumor {s.get('tumor_dice', {'mean': float('nan')})['mean']:.3f} ({time.time() - t0:.0f}s)", flush=True)
         if score > best:
             best = score
             torch.save({"model": model.state_dict(), "args": vars(args)}, os.path.join(args.out, "best.pt"))

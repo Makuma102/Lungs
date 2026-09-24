@@ -50,10 +50,11 @@ def load_case(ct_path, anat_dir, tumor_path=None, pred_path=None):
 
 
 def airway_mask(masks):
+    """Prefer the full-resolution airway model (its class includes the trachea);
+    fall back to the coarse (3 mm) trachea from the fast `total` model."""
     a = np.zeros_like(next(iter(masks.values())))
-    for k in ("trachea", "bronchi"):
-        if k in masks:
-            a |= masks[k]
+    for k in (("bronchi",) if "bronchi" in masks else ("trachea",)):
+        a |= masks[k]
     if not a.any():
         return a
     lab, n = ndimage.label(a)  # keep the main connected tree
@@ -127,14 +128,39 @@ def centerline(airway, spacing, affine, min_branch_mm=5.0):
     }
 
 
-def mesh_ras(mask, affine, step=1, sigma=0.7, max_dim=None):
-    """Marching cubes on a smoothed mask, vertices mapped voxel->RAS mm."""
+def taubin(verts, faces, iters=10, lam=0.5, mu=-0.53):
+    """Taubin lambda|mu smoothing: removes staircase artefacts without the
+    shrinkage of plain Laplacian smoothing (Taubin, SIGGRAPH 1995)."""
+    from scipy import sparse
+    n = len(verts)
+    e = np.concatenate([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    e = np.concatenate([e, e[:, ::-1]])
+    A = sparse.coo_matrix((np.ones(len(e)), (e[:, 0], e[:, 1])), shape=(n, n)).tocsr()
+    A.data[:] = 1.0
+    deg = np.asarray(A.sum(1)).ravel()
+    deg[deg == 0] = 1
+    W = sparse.diags(1.0 / deg) @ A
+    v = verts.astype(np.float64)
+    for _ in range(iters):
+        v = v + lam * (W @ v - v)
+        v = v + mu * (W @ v - v)
+    return v
+
+
+def mesh_ras(mask, affine, step=1, sigma_mm=1.0, smooth_iters=10):
+    """Marching cubes on a mask smoothed with a Gaussian of `sigma_mm` (physical
+    units, so coarse and fine inputs look alike), mapped voxel->RAS mm, then
+    Taubin-smoothed."""
     sl = ndimage.find_objects(mask.astype(np.uint8))[0]
-    sub = np.pad(mask[sl], 2)
-    origin = np.array([s.start for s in sl]) - 2
-    f = ndimage.gaussian_filter(sub.astype(np.float32), sigma)
+    sub = np.pad(mask[sl], 3)
+    origin = np.array([s.start for s in sl]) - 3
+    zooms = np.sqrt((affine[:3, :3] ** 2).sum(0))
+    f = ndimage.gaussian_filter(sub.astype(np.float32), sigma_mm / zooms)
     verts, faces, _, _ = measure.marching_cubes(f, 0.5, step_size=step)
-    return nib.affines.apply_affine(affine, verts + origin), faces
+    verts = nib.affines.apply_affine(affine, verts + origin)
+    if smooth_iters:
+        verts = taubin(verts, faces, smooth_iters)
+    return verts, faces
 
 
 def write_obj(path, verts, faces, name):
@@ -166,6 +192,8 @@ def web_mesh(verts, faces):
 
 # mesh resolution per structure: fine for thin airways/vessels, coarse for big lobes
 STEP = {"trachea": 1, "bronchi": 1, "airway": 1, "vessels": 1, "tumor_gt": 1, "tumor_pred": 1}
+# smoothing kernel per structure (mm): lobes come from a 3 mm model, vessels are thin
+SIGMA_MM = {"airway": 0.8, "vessels": 0.5, "tumor_gt": 0.7, "tumor_pred": 0.7}
 
 
 def build(ct_path, anat_dir, out_dir, tumor_path=None, pred_path=None):
@@ -174,13 +202,15 @@ def build(ct_path, anat_dir, out_dir, tumor_path=None, pred_path=None):
     vox_ml = float(np.prod(zooms)) / 1000
     report = {"case": os.path.basename(ct_path), "spacing_mm": [float(z) for z in zooms], "structures": {}}
     aw = airway_mask(masks)
+    coarse_airway = "bronchi" not in masks
     if aw.any():
         masks = {k: v for k, v in masks.items() if k not in ("trachea", "bronchi")}
         masks["airway"] = aw
     web = {}
     for name, m in masks.items():
         step = STEP.get(name, 2)
-        v, f = mesh_ras(m, aff, step=step)
+        sig = 2.0 if (name == "airway" and coarse_airway) else SIGMA_MM.get(name, 2.0)
+        v, f = mesh_ras(m, aff, step=step, sigma_mm=sig)
         write_obj(os.path.join(out_dir, name + ".obj"), v, f, name)
         report["structures"][name] = {"volume_ml": round(m.sum() * vox_ml, 2), "triangles": int(len(f))}
         web[name] = web_mesh(*decimate(v, f, WEB_TRIS.get(name, 25000)))

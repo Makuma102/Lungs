@@ -43,15 +43,33 @@ def hd95(pred, gt, spacing=(1.0, 1.0, 1.0)):
     return float(np.percentile(d, 95))
 
 
-def lesion_detection(pred, gt, min_voxels=10):
-    """Lesion-wise detection: a GT connected component counts as detected if any
-    predicted voxel overlaps it. Returns (TP, FN, FP) in lesion counts."""
-    gl, ng = ndimage.label(gt.astype(bool))
-    pl, npred = ndimage.label(pred.astype(bool))
-    tp = sum(1 for i in range(1, ng + 1) if (pred.astype(bool)[gl == i]).any())
-    fp = 0
+def lesion_detection(pred, gt, min_voxels=10, spacing=None, min_diameter_mm=None):
+    """Lesion-wise detection. Connected components smaller than the size
+    threshold are ignored on BOTH sides (expert labels contain annotation specks
+    of a few voxels that are not lesions). The threshold is `min_voxels`, or, if
+    `spacing` and `min_diameter_mm` are given, the volume of a sphere with that
+    diameter (3 mm is the LIDC/LUNA nodule convention).
+    A GT lesion is detected if any predicted voxel overlaps it; a predicted
+    component is a false positive if it overlaps no GT voxel.
+    Returns (TP, FN, FP) in lesion counts."""
+    pred, gt = pred.astype(bool), gt.astype(bool)
+    if spacing is not None and min_diameter_mm is not None:
+        min_vox = (np.pi / 6 * min_diameter_mm ** 3) / float(np.prod(spacing[-gt.ndim:]))
+    else:
+        min_vox = min_voxels
+    gl, ng = ndimage.label(gt)
+    pl, npred = ndimage.label(pred)
+    gsize = ndimage.sum(gt, gl, range(1, ng + 1)) if ng else []
+    psize = ndimage.sum(pred, pl, range(1, npred + 1)) if npred else []
+    tp = fn = fp = 0
+    for i in range(1, ng + 1):
+        if gsize[i - 1] < min_vox:
+            continue
+        if pred[gl == i].any():
+            tp += 1
+        else:
+            fn += 1
     for j in range(1, npred + 1):
-        comp = pl == j
-        if comp.sum() >= min_voxels and not gt.astype(bool)[comp].any():
+        if psize[j - 1] >= min_vox and not gt[pl == j].any():
             fp += 1
-    return tp, ng - tp, fp
+    return tp, fn, fp

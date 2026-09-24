@@ -47,7 +47,7 @@ def boot_ci(x, n=2000, seed=0):
 
 def case_metrics(p, g, zooms):
     vml = float(np.prod(zooms)) / 1000
-    tp, fn, fp = lesion_detection(p, g, min_voxels=10)
+    tp, fn, fp = lesion_detection(p, g, spacing=zooms, min_diameter_mm=3.0)
     return {"dice": dice(p, g), "hd95": hd95(p, g, zooms), "sens": sensitivity(p, g), "prec": precision(p, g),
             "tp": tp, "fn": fn, "fp": fp, "vol_gt_ml": g.sum() * vml, "vol_pred_ml": p.sum() * vml,
             "detected": bool((p & g).any())}
@@ -81,6 +81,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="runs/msd3d/best.pt")
     ap.add_argument("--out", default="results/msd")
+    ap.add_argument("--rescore", action="store_true", help="reuse cached native-grid predictions")
     ap.add_argument("--max-cases", type=int, default=None, help="smoke-test on the first N test cases")
     ap.add_argument("--postproc", default="results/msd/postproc_selection.json",
                     help="validation-selected rule (scripts/select_postproc.py); evaluated alongside the default")
@@ -100,14 +101,27 @@ def main():
         ct_p = os.path.join(ROOT, "imagesTr", c + ".nii.gz")
         npz = os.path.join("data/prep", c + ".npz")
         d = np.load(npz)
-        raw, prob_raw = predict_volume(model, d["img"].astype(np.float32))
+        cache = os.path.join(a.out, "pred_cache", c + ".npz")
+        use_cache = a.rescore and os.path.exists(cache)
+        raw = prob_raw = None
+        if not use_cache:
+            raw, prob_raw = predict_volume(model, d["img"].astype(np.float32))
 
         def native(rule):
             lab = postprocess(raw, tuple(d["spacing"]), tumor_prob=prob_raw, **(rule or {}))
             pr = np.where(lab == 2, np.maximum(prob_raw, 0.5), np.minimum(prob_raw, 0.49))
             return np.asanyarray(to_original_nifti(pr, npz, ct_p).dataobj) > 0
-        p = native(None)
-        p_sel = native(sel_rule) if sel_rule else None
+        if use_cache:  # re-scoring without re-running the network (only with --rescore)
+            cz = np.load(cache)
+            shp = tuple(cz["shape"])
+            up = lambda k: np.unpackbits(cz[k], count=int(np.prod(shp))).reshape(shp).astype(bool)
+            p, p_sel = up("p"), (up("p_sel") if "p_sel" in cz else None)
+        else:
+            p = native(None)
+            p_sel = native(sel_rule) if sel_rule else None
+            os.makedirs(os.path.dirname(cache), exist_ok=True)
+            np.savez_compressed(cache, shape=np.array(p.shape), p=np.packbits(p),
+                                **({"p_sel": np.packbits(p_sel)} if p_sel is not None else {}))
         ct = nib.load(ct_p)
         hu = np.asanyarray(ct.dataobj).astype(np.float32)
         zooms = ct.header.get_zooms()[:3]

@@ -76,6 +76,17 @@ def test_hd95_is_physical_and_detects_shift():
     assert hd95(a, b, (1, 1, 2.5)) == pytest.approx(10, abs=2.6)  # scales with spacing
 
 
+def test_lesion_detection_ignores_annotation_specks():
+    """A 1-voxel speck in the expert label is not a lesion; counting it would
+    deflate lesion sensitivity (seen on MSD labels)."""
+    gt = _ball((40, 40, 40), (20, 20, 20), 5)
+    gt[2, 2, 2] = True
+    pred = _ball((40, 40, 40), (20, 20, 20), 5)
+    assert lesion_detection(pred, gt, spacing=(1, 1, 1), min_diameter_mm=3) == (1, 0, 0)
+    pred2 = pred.copy(); pred2[35, 35, 35] = True  # a 1-voxel predicted speck is not an FP either
+    assert lesion_detection(pred2, gt, spacing=(1, 1, 1), min_diameter_mm=3) == (1, 0, 0)
+
+
 def test_lesion_detection_counts_fp_and_fn():
     gt = _ball((40, 40, 40), (10, 10, 10), 3) | _ball((40, 40, 40), (30, 30, 30), 3)
     pred = _ball((40, 40, 40), (10, 10, 10), 3) | _ball((40, 40, 40), (30, 10, 10), 3)

@@ -1,0 +1,10 @@
+{
+ "case": "lung_028",
+ "gt_ml": 151.4835,
+ "inside_gt_frac": {
+  "background": 0.7611843864183228,
+  "lung": 0.2327778272881205,
+  "tumor": 0.006037786293556724
+ },
+ "mean_window_intensity_in_gt": 0.5987673401832581
+}

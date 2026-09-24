@@ -43,14 +43,15 @@ def hd95(pred, gt, spacing=(1.0, 1.0, 1.0)):
     return float(np.percentile(d, 95))
 
 
-def lesion_detection(pred, gt, min_voxels=10, spacing=None, min_diameter_mm=None):
+def lesion_detection(pred, gt, min_voxels=10, spacing=None, min_diameter_mm=None, min_overlap_frac=0.0):
     """Lesion-wise detection. Connected components smaller than the size
     threshold are ignored on BOTH sides (expert labels contain annotation specks
     of a few voxels that are not lesions). The threshold is `min_voxels`, or, if
     `spacing` and `min_diameter_mm` are given, the volume of a sphere with that
     diameter (3 mm is the LIDC/LUNA nodule convention).
-    A GT lesion is detected if any predicted voxel overlaps it; a predicted
-    component is a false positive if it overlaps no GT voxel.
+    A GT lesion is detected if the prediction covers more than `min_overlap_frac`
+    of its volume (0 = any overlap, which is lenient: a 1% touch would count);
+    a predicted component is a false positive if it overlaps no GT voxel.
     Returns (TP, FN, FP) in lesion counts."""
     pred, gt = pred.astype(bool), gt.astype(bool)
     if spacing is not None and min_diameter_mm is not None:
@@ -65,7 +66,8 @@ def lesion_detection(pred, gt, min_voxels=10, spacing=None, min_diameter_mm=None
     for i in range(1, ng + 1):
         if gsize[i - 1] < min_vox:
             continue
-        if pred[gl == i].any():
+        covered = pred[gl == i].sum() / gsize[i - 1]
+        if covered > min_overlap_frac:
             tp += 1
         else:
             fn += 1

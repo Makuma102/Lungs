@@ -87,6 +87,14 @@ def test_lesion_detection_ignores_annotation_specks():
     assert lesion_detection(pred2, gt, spacing=(1, 1, 1), min_diameter_mm=3) == (1, 0, 0)
 
 
+def test_lesion_detection_requires_meaningful_overlap():
+    """A prediction touching 1% of a large tumor must not count as detection."""
+    gt = _ball((60, 60, 60), (30, 30, 30), 15)
+    pred = np.zeros_like(gt); pred[30, 30, 15:18] = True
+    assert lesion_detection(pred, gt, min_voxels=1)[0] == 1                      # lenient default
+    assert lesion_detection(pred, gt, min_voxels=1, min_overlap_frac=0.1)[:2] == (0, 1)
+
+
 def test_lesion_detection_counts_fp_and_fn():
     gt = _ball((40, 40, 40), (10, 10, 10), 3) | _ball((40, 40, 40), (30, 30, 30), 3)
     pred = _ball((40, 40, 40), (10, 10, 10), 3) | _ball((40, 40, 40), (30, 10, 10), 3)

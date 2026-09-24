@@ -47,10 +47,11 @@ def boot_ci(x, n=2000, seed=0):
 
 def case_metrics(p, g, zooms):
     vml = float(np.prod(zooms)) / 1000
-    tp, fn, fp = lesion_detection(p, g, spacing=zooms, min_diameter_mm=3.0)
+    tp, fn, fp = lesion_detection(p, g, spacing=zooms, min_diameter_mm=3.0, min_overlap_frac=0.1)
     return {"dice": dice(p, g), "hd95": hd95(p, g, zooms), "sens": sensitivity(p, g), "prec": precision(p, g),
             "tp": tp, "fn": fn, "fp": fp, "vol_gt_ml": g.sum() * vml, "vol_pred_ml": p.sum() * vml,
-            "detected": bool((p & g).any())}
+            "detected": bool((p & g).sum() >= 0.1 * max(1, g.sum())),  # >=10% of the tumor covered
+            "touched": bool((p & g).any())}
 
 
 def threshold_baseline(hu, zooms):

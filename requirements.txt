@@ -1,0 +1,8 @@
+torch>=2.0
+numpy
+scipy
+scikit-image
+pillow
+nibabel
+pytest
+# optional: kaggle huggingface_hub

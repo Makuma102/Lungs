@@ -96,15 +96,16 @@ class ConvBlock3d(nn.Module):
 class SmallUNet3D(nn.Module):
     """3D U-Net (Cicek et al., 2016) with anisotropic pooling.
 
-    CT slice spacing (2.5 mm) is coarser than in-plane (~1 mm), so the first
-    pooling is in-plane only (1,2,2), as in nnU-Net's anisotropic configs.
-    Input: (N, 1, D, H, W) with D divisible by 2**(depth-1), H/W by 2**depth.
+    With anisotropic=True (thick-slice CT, e.g. 2.5 mm vs ~1 mm in-plane) the
+    first pooling is in-plane only (1,2,2), as in nnU-Net's anisotropic configs;
+    for isotropically resampled data use anisotropic=False.
+    Input: (N, 1, D, H, W), each axis divisible by its total pooling factor.
     """
 
-    def __init__(self, in_channels=1, num_classes=3, base=12, depth=4, dropout=0.1):
+    def __init__(self, in_channels=1, num_classes=3, base=12, depth=4, dropout=0.1, anisotropic=True):
         super().__init__()
         widths = [base * 2 ** i for i in range(depth + 1)]
-        self.pools = [(1, 2, 2)] + [(2, 2, 2)] * (depth - 1)
+        self.pools = ([(1, 2, 2)] if anisotropic else [(2, 2, 2)]) + [(2, 2, 2)] * (depth - 1)
         self.enc = nn.ModuleList()
         c = in_channels
         for w in widths[:-1]:

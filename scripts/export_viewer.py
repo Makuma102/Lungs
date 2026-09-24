@@ -1,6 +1,6 @@
 """Bundle meshes + reports for the web CAD viewer (viewer/index.html).
 
-Writes viewer/models/{gt,unet2d,unet3d}.obj and viewer/models/meta.json for
+Writes results/phantom_viewer/{gt,unet2d,unet3d}.obj and meta.json for
 test case 0 of the phantom split, so predictions can be compared to ground truth.
 """
 import json
@@ -17,7 +17,7 @@ from lungseg.train import load  # noqa: E402
 from lungseg.metrics import dice, hd95  # noqa: E402
 
 
-def main(out="viewer/models"):
+def main(out="results/phantom_viewer"):
     os.makedirs(out, exist_ok=True)
     meta = {}
     runs = {"unet2d": ("runs/phantom", SmallUNet), "unet3d": ("runs/phantom3d", SmallUNet3D)}

@@ -85,3 +85,12 @@ def test_train_cli_3d(tmp_path):
     res = main(["--dim", "3", "--epochs", "1", "--size", "96", "--depth-slices", "16", "--n-train", "2",
                 "--n-val", "1", "--n-test", "1", "--batch", "2", "--base", "4", "--out", str(tmp_path)])
     assert "lung_dice" in res and os.path.exists(tmp_path / "case0.obj")
+
+
+def test_sliding_window_matches_shape():
+    from lungseg.model import SmallUNet3D
+    from lungseg.reconstruct3d import _predict_3d
+    m = SmallUNet3D(base=4, depth=3, anisotropic=False).eval()
+    vol = np.random.default_rng(0).random((40, 50, 45)).astype(np.float32)
+    lab, prob = _predict_3d(m, vol, "cpu", patch=(16, 32, 32))
+    assert lab.shape == prob.shape == vol.shape and np.isfinite(prob).all()

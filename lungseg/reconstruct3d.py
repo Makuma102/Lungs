@@ -21,14 +21,39 @@ def _pad_to(vol, mult):
     return np.pad(vol, pads, mode="edge"), vol.shape
 
 
+def _tta(model, x):
+    return (model(x).softmax(1) + model(x.flip(-1)).softmax(1).flip(-1)) / 2
+
+
 @torch.no_grad()
-def _predict_3d(model, vol, device):
-    """Whole-volume 3D inference (padded to the network's stride) with flip TTA."""
-    depth = len(model.enc)
-    v, shape = _pad_to(vol, (2 ** (depth - 1), 2 ** depth, 2 ** depth))
-    x = torch.from_numpy(v[None, None]).float().to(device)
-    p = (model(x).softmax(1) + model(x.flip(-1)).softmax(1).flip(-1)) / 2
-    p = p[0, :, :shape[0], :shape[1], :shape[2]].cpu().numpy()
+def _predict_3d(model, vol, device, patch=(96, 128, 128), overlap=0.5):
+    """3D inference with flip TTA. Small volumes run whole; large ones use a
+    sliding window with Gaussian importance weighting (nnU-Net style)."""
+    mult = tuple(int(m) for m in np.prod(np.array(model.pools), axis=0))
+    if all(s <= p for s, p in zip(vol.shape, patch)):
+        v, shape = _pad_to(vol, mult)
+        p = _tta(model, torch.from_numpy(v[None, None]).float().to(device))
+        p = p[0, :, :shape[0], :shape[1], :shape[2]].cpu().numpy()
+        return p.argmax(0).astype(np.uint8), p[2]
+    patch = tuple(p - p % m for p, m in zip(patch, mult))
+    pads = [(0, max(0, p - s)) for p, s in zip(patch, vol.shape)]
+    v = np.pad(vol, pads, mode="edge")
+    g = np.ones(patch, np.float32)
+    for ax, n in enumerate(patch):  # separable Gaussian weight, sigma = patch/8
+        w = np.exp(-0.5 * ((np.arange(n) - (n - 1) / 2) / (n / 8)) ** 2)
+        g *= w.reshape([-1 if i == ax else 1 for i in range(3)])
+    acc = np.zeros((3,) + v.shape, np.float32)
+    wsum = np.zeros(v.shape, np.float32)
+    starts = [sorted(set(list(range(0, s - p + 1, max(1, int(p * (1 - overlap))))) + [s - p]))
+              for s, p in zip(v.shape, patch)]
+    for z in starts[0]:
+        for y in starts[1]:
+            for x in starts[2]:
+                sl = (slice(z, z + patch[0]), slice(y, y + patch[1]), slice(x, x + patch[2]))
+                p = _tta(model, torch.from_numpy(v[sl][None, None].copy()).float().to(device))[0].cpu().numpy()
+                acc[(slice(None),) + sl] += p * g
+                wsum[sl] += g
+    p = (acc / wsum)[:, :vol.shape[0], :vol.shape[1], :vol.shape[2]]
     return p.argmax(0).astype(np.uint8), p[2]
 
 

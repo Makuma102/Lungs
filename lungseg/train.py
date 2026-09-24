@@ -33,6 +33,11 @@ def load(args):
         shape = (args.depth_slices, args.size, args.size)
         vols = D.make_phantom_volumes(args.n_train + args.n_val + args.n_test, shape, seed=args.seed)
         spacings = [(2.5, 1.0 * 256 / args.size, 1.0 * 256 / args.size)] * len(vols)
+    elif args.data == "msd3d":  # preprocessed by `python -m lungseg.prep_msd`
+        from .prep_msd import load_prepped
+        vols, meta = load_prepped(args.root)
+        spacings = [m["spacing"] for m in meta]
+        args.cases = [m["case"] for m in meta]
     elif args.data == "msd":
         vols, spacings = D.load_msd_lung(args.root, args.size, args.max_cases)
     else:
@@ -42,6 +47,7 @@ def load(args):
     n_te = max(1, round(len(vols) * args.n_test / (args.n_train + args.n_val + args.n_test)))
     n_va = max(1, round(len(vols) * args.n_val / (args.n_train + args.n_val + args.n_test)))
     te, va, tr = idx[:n_te], idx[n_te:n_te + n_va], idx[n_te + n_va:]
+    args.split = {"train": [int(i) for i in tr], "val": [int(i) for i in va], "test": [int(i) for i in te]}
     pick = lambda ii: ([vols[i] for i in ii], [spacings[i] for i in ii])
     return pick(tr), pick(va), pick(te)
 
@@ -89,7 +95,7 @@ def summarize(rows):
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", choices=["phantom", "msd", "png"], default="phantom")
+    ap.add_argument("--data", choices=["phantom", "msd", "msd3d", "png"], default="phantom")
     ap.add_argument("--root", default="data")
     ap.add_argument("--out", default="runs/exp")
     ap.add_argument("--size", type=int, default=128)
@@ -102,6 +108,10 @@ def main(argv=None):
     ap.add_argument("--batch", type=int, default=16)
     ap.add_argument("--lr", type=float, default=2e-3)
     ap.add_argument("--dim", type=int, choices=[2, 3], default=2, help="2D slice U-Net or 3D U-Net")
+    ap.add_argument("--isotropic", action="store_true", help="3D: pool all axes equally (isotropic data)")
+    ap.add_argument("--patch", type=int, nargs=3, default=None, help="3D patch size D H W")
+    ap.add_argument("--samples-per-volume", type=int, default=4)
+    ap.add_argument("--tumor-oversample", type=float, default=0.5)
     ap.add_argument("--base", type=int, default=None, help="base width (default 16 for 2D, 12 for 3D)")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
@@ -117,8 +127,10 @@ def main(argv=None):
     print(f"cases train/val/test = {len(trv)}/{len(vav)}/{len(tev)}")
 
     if args.dim == 3:
-        model = SmallUNet3D(base=args.base).to(device)
-        ds = D.PatchDataset3D(trv, patch=(min(32, args.depth_slices), 96, 96), seed=args.seed)
+        model = SmallUNet3D(base=args.base, anisotropic=not args.isotropic).to(device)
+        patch = tuple(args.patch) if args.patch else (min(32, args.depth_slices), 96, 96)
+        ds = D.PatchDataset3D(trv, patch=patch, samples_per_volume=args.samples_per_volume,
+                              tumor_oversample=args.tumor_oversample, seed=args.seed)
     else:
         model = SmallUNet(base=args.base).to(device)
         ds = D.SliceDataset(trv, augment=True, seed=args.seed)

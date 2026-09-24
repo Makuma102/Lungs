@@ -29,6 +29,7 @@ header .file{font:12px "IBM Plex Mono",ui-monospace,monospace;color:var(--ink-2)
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-left:auto}
 .seg button{background:transparent;border:0;color:var(--ink-2);font:500 12px "IBM Plex Sans",sans-serif;padding:5px 12px;cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
+.seg button:disabled{opacity:.5;cursor:not-allowed}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 .seg button:focus-visible,.tool:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 aside{background:var(--panel);overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:16px}
@@ -333,7 +334,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyColor
 
 Promise.all([
   fetch("models/meta.json").then(r => r.json()),
-  ...["gt", "unet3d", "unet2d"].map(n => fetch(`models/${n}.obj`).then(r => r.ok ? r.text() : null)),
+  ...["gt", "unet3d", "unet2d"].map(n => fetch(`models/${n}.obj.txt`).then(r => r.ok ? r.text() : null)),
 ]).then(([m, gt, u3, u2]) => {
   meta = m;
   if (gt) addModel("gt", parseOBJ(gt), true);
@@ -342,6 +343,7 @@ Promise.all([
   frame(); resize(); setView("iso");
   $("st-sp").textContent = `spacing ${m.spacing_mm.map(s=>s.toFixed(1)).join(" × ")} mm`;
   $("loading").hidden = true;
+  for (const k of ["unet2d", "unet3d"]) if (!groups[k]){ const b = $("m-" + k); b.disabled = true; b.title = "Still training"; b.textContent += " (training)"; }
   show(groups.unet3d ? "unet3d" : "unet2d");
   loop();
 }).catch(err => { $("loading").textContent = "Could not load meshes: " + err.message; });

@@ -1,0 +1,14 @@
+[
+ {
+  "case": "lung_096",
+  "fp_volume_ml": 0.8,
+  "gt_volume_ml": 0.7,
+  "distance_to_tumor_mm": 67.0,
+  "lateral_offset_from_trachea_mm": 116.0,
+  "centroid_ras_mm": [
+   125.0,
+   -43.0,
+   -76.0
+  ]
+ }
+]

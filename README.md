@@ -60,4 +60,4 @@ pytest -q                                                     # smoke + validity
 - Geometry: sliding-window inference exactly matches whole-volume inference. Nodule volume is correct under anisotropic spacing. Post-processing removes specks. Tumor mesh centroids match label centroids in RAS within 3 mm. The native-grid round trip keeps Dice above 0.85.
 
 ## Results
-See `paper/paper.pdf` and `results/msd/test_eval.json`. The earlier synthetic-phantom results (`RESULTS.md`) only served as a code sanity check.
+Held-out test split (13 patients), native resolution: tumor Dice 0.61 [0.45, 0.74] (default post-processing) and 0.66 [0.49, 0.79] with the validation-selected largest-component rule (0.08 FP/scan). Ablation: an anatomical lung class (v2) improved validation Dice but *reduced* test Dice (paired difference -0.07 [-0.18, +0.04]); v1 remains the main model. Full details in `paper/paper.pdf`, `results/msd/test_eval.json`, `results/compare_v1_v2.json`. The earlier synthetic-phantom results (`RESULTS.md`) only served as a code sanity check.

@@ -1,0 +1,50 @@
+[
+ {
+  "case": "lung_055",
+  "fp_volume_ml": 58.3,
+  "gt_volume_ml": 28.6,
+  "distance_to_tumor_mm": 135.0,
+  "lateral_offset_from_trachea_mm": 136.0,
+  "centroid_ras_mm": [
+   -127.0,
+   26.0,
+   -215.0
+  ]
+ },
+ {
+  "case": "lung_014",
+  "fp_volume_ml": 68.2,
+  "gt_volume_ml": 31.1,
+  "distance_to_tumor_mm": 180.0,
+  "lateral_offset_from_trachea_mm": 48.0,
+  "centroid_ras_mm": [
+   -45.0,
+   -18.0,
+   -53.0
+  ]
+ },
+ {
+  "case": "lung_043",
+  "fp_volume_ml": 4.3,
+  "gt_volume_ml": 2.8,
+  "distance_to_tumor_mm": 135.0,
+  "lateral_offset_from_trachea_mm": 44.0,
+  "centroid_ras_mm": [
+   -54.0,
+   -6.0,
+   -69.0
+  ]
+ },
+ {
+  "case": "lung_096",
+  "fp_volume_ml": 0.2,
+  "gt_volume_ml": 0.7,
+  "distance_to_tumor_mm": 66.0,
+  "lateral_offset_from_trachea_mm": 116.0,
+  "centroid_ras_mm": [
+   126.0,
+   -43.0,
+   -77.0
+  ]
+ }
+]

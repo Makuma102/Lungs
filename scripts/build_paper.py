@@ -128,6 +128,9 @@ def main():
     assert ev and tr, "run training and scripts/evaluate_msd.py first"
     S = ev["summary"]; O = S["ours"]; T = S["threshold"]; E = S["empty"]
     OS = S.get("ours_sel"); sel = J("results/msd/postproc_selection.json")
+    cmp_ = J("results/compare_v1_v2.json"); ev2 = J("results/msd_anat/test_eval.json")
+    tr2 = J("runs/msd3d_anat/results.json"); sel2 = J("results/msd_anat/postproc_selection.json")
+    fp2 = J("results/msd_anat/fp_components.json") or []; fp1 = J("results/msd/fp_components.json") or []
     args = tr["args"]
     loss_figure(tr["log"], os.path.join(OUT, "fig", "fig_training.png"))
     dice_figure(ev["cases"], os.path.join(OUT, "fig", "fig_dice_per_case.png"))
@@ -154,7 +157,7 @@ def main():
                              f"{100*fr['background']:.0f}% background, {100*fr['lung']:.0f}% lung and {100*fr['tumor']:.0f}% tumor. On visual inspection (Fig. 6) it is a posterior mass "
                              f"against the chest wall and spine, with soft-tissue density continuous with the tissue outside the lung. Our lung class is defined by thresholding aerated lung, "
                              f"so during training such tissue looks like the background class. Deriving the lung class from anatomical lung masks, which include the tumor bed, "
-                             f"would address this directly; we have not tested it. Other failures were not audited individually.")
+                             f"might address this; Section 4.2 tests it. Other failures were not audited individually.")
     rho = float(np.corrcoef(np.log([r["ours"]["vol_gt_ml"] for r in ev["cases"]]), [r["ours"]["dice"] for r in ev["cases"]])[0, 1])
     fp_total = sum(r["ours"]["fp"] for r in ev["cases"])
     rho_ceil = float(np.corrcoef(np.log([r["ours"]["vol_gt_ml"] for r in ev["cases"]]), [r["ceiling_dice"] for r in ev["cases"]])[0, 1])
@@ -251,6 +254,33 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
                           f"five validation patients the selection is itself noisy.")
     else:
         selection_text = "Not run."
+    ablation = ""
+    abstract_ablation = ""
+    if cmp_ and ev2:
+        S2 = ev2["summary"]
+        def best_val(t):
+            return max(r["val_score"] for r in t["log"] if "val_score" in r)
+        c1 = {r["case"]: r for r in ev["cases"]}; c2 = {r["case"]: r for r in ev2["cases"]}
+        fc2 = J(os.path.join(OUT, "fig", "fig_failure.json"))
+        big_fp = [f for f in fp2 if f["fp_volume_ml"] >= 1]
+        def arow(name, M, D=None):
+            d = (f"<td>{D['diff_ci'][0]:+.3f} [{D['diff_ci'][1]:+.3f}, {D['diff_ci'][2]:+.3f}]</td><td>{D['wilcoxon_p']:.2f}</td>" if D else "<td>&ndash;</td><td>&ndash;</td>")
+            return (f"<tr><td>{name}</td><td>{ci(M['dice'])}</td><td>{M['fp_per_scan']:.2f}</td><td>{M['lesion_sensitivity']:.2f}</td>"
+                    f"<td>{M['case_detection_rate']:.2f}</td>{d}</tr>")
+        worst_case = fc2["case"] if fc2 else "lung_028"
+        ablation = f"""
+<h3>4.2 Ablation: anatomical lung class</h3>
+<p>Motivated by the failure analysis, we retrained the same network (same split, seed, patches, schedule and number of epochs) with the lung class taken from the union of the five TotalSegmentator lobes, which include the tumor bed, instead of the air threshold (v2). Post-processing was again selected on the validation patients only; the same largest-component rule was chosen (validation Dice {sel2['default']['dice']:.3f} default, {sel2['selected']['dice']:.3f} selected). On validation, v2 looked better than v1 (best validation score, the mean of lung and tumor Dice, {best_val(tr2):.3f} vs. {best_val(tr):.3f}). <b>On the test set it was not.</b> {"The paired difference in Dice (v2 &minus; v1) was " + format(cmp_['ours']['diff_ci'][0], '+.3f') + " [" + format(cmp_['ours']['diff_ci'][1], '+.3f') + ", " + format(cmp_['ours']['diff_ci'][2], '+.3f') + "] with default post-processing (Wilcoxon p = " + format(cmp_['ours']['wilcoxon_p'], '.2f') + ") and " + format(cmp_['ours_sel']['diff_ci'][0], '+.3f') + " [" + format(cmp_['ours_sel']['diff_ci'][1], '+.3f') + ", " + format(cmp_['ours_sel']['diff_ci'][2], '+.3f') + "] with the largest-component rule (p = " + format(cmp_['ours_sel']['wilcoxon_p'], '.2f') + ")"} (Table 5).
+The targeted failure improved only partly: with default post-processing, {worst_case} went from Dice {c1[worst_case]['ours']['dice']:.2f} to {c2[worst_case]['ours']['dice']:.2f}.
+The main cost was large false positives. In {len(fp2)} of {S2['n_test']} test patients v2's largest predicted component did not touch the expert tumor (v1: {len(fp1)}), so the largest-component rule discarded the true tumor. {len(big_fp)} of these components were &ge;1 mL ({"; ".join(f"{f['case']}: {f['fp_volume_ml']:.0f} mL, {f['distance_to_tumor_mm']:.0f} mm from the tumor, {f['lateral_offset_from_trachea_mm']:.0f} mm lateral to the trachea" for f in big_fp)}). Components close to the tracheal midline are compatible with hilar or mediastinal soft tissue, which the lobe masks partly include; we infer this from coordinates only and did not verify it visually.
+We therefore keep v1 as the main model. The ablation also shows why a small validation set can mislead: the v2 validation gain did not transfer to the test set.</p>
+<table class="small"><caption><b>Table 5.</b> Ablation on the same 13 test patients. Dice: mean with bootstrap 95% CI. Paired difference: v2 &minus; v1 per patient, bootstrap 95% CI; two-sided Wilcoxon signed-rank test.</caption>
+<thead><tr><th>Model / post-processing</th><th>Dice</th><th>FP / scan</th><th>Lesion sens.</th><th>Case det.</th><th>Paired diff. vs v1</th><th>p</th></tr></thead><tbody>
+{arow("v1 threshold lung, default", O)}{arow("v2 anatomical lung, default", S2['ours'], cmp_['ours'])}
+{arow("v1 threshold lung, largest comp.", OS)}{arow("v2 anatomical lung, largest comp.", S2['ours_sel'], cmp_['ours_sel'])}
+</tbody></table>"""
+        abstract_ablation = (f" Retraining with an anatomical lung class improved validation Dice but reduced test Dice "
+                             f"(paired difference {cmp_['ours']['diff_ci'][0]:+.2f} [{cmp_['ours']['diff_ci'][1]:+.2f}, {cmp_['ours']['diff_ci'][2]:+.2f}]), a negative result we report in full.")
     today = datetime.date.today().isoformat()
     body = f"""
 <header>
@@ -261,7 +291,7 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
 <section class="abstract"><h2>Abstract</h2>
 <p><b>Purpose.</b> We describe an open, fully reproducible pipeline that segments lung tumors on chest CT with a deliberately small 3D U-Net and turns each scan into an anatomy-level 3D model (five lobes, airway tree with centreline, pulmonary arteries and veins, and tumor). We report results with checks that catch <i>false success</i>. The whole thing runs on a 4-core CPU.
 <b>Methods.</b> We trained a {tr['params']/1e6:.1f}M-parameter 3D U-Net on {n_train} patients from the Medical Segmentation Decathlon (MSD) Task06 Lung dataset. Scans were resampled to 1.5 mm isotropic and cropped to the lungs. We validated on {n_val} patients and tested on {n_test} held-out patients. Split is by patient. Lobes, airways and vessels come from the public TotalSegmentator models. We add a pruned airway centreline, branch-generation counting and patient-space meshes. Test metrics are computed at native resolution with bootstrap confidence intervals. We compare against an intensity-threshold baseline, an empty predictor and a shuffled-label control, and against the ceiling set by our own resampling.
-<b>Results.</b> On the test split the model reached tumor Dice {ci(O['dice'])}, HD95 {ci(O['hd95'], 1)} mm and lesion-level sensitivity {O['lesion_sensitivity']:.2f} with {O['fp_per_scan']:.2f} false-positive components per scan. It detected the tumor in {n_det} of {S['n_test']} patients.{(" A largest-component rule chosen on validation data gave Dice " + ci(OS['dice']) + " with " + format(OS['fp_per_scan'], '.2f') + " FP/scan.") if OS else ""} The threshold baseline scored Dice {ci(T['dice'])}; the shuffled-label control scored {ci(S['shuffled_gt_dice'])}; the resampling ceiling was {ci(S['resampling_ceiling_dice'])}.
+<b>Results.</b> On the test split the model reached tumor Dice {ci(O['dice'])}, HD95 {ci(O['hd95'], 1)} mm and lesion-level sensitivity {O['lesion_sensitivity']:.2f} with {O['fp_per_scan']:.2f} false-positive components per scan. It detected the tumor in {n_det} of {S['n_test']} patients.{(" A largest-component rule chosen on validation data gave Dice " + ci(OS['dice']) + " with " + format(OS['fp_per_scan'], '.2f') + " FP/scan.") if OS else ""} The threshold baseline scored Dice {ci(T['dice'])}; the shuffled-label control scored {ci(S['shuffled_gt_dice'])}; the resampling ceiling was {ci(S['resampling_ceiling_dice'])}.{abstract_ablation}
 <b>Conclusion.</b> A small model trained in about {sum(r['sec'] for r in tr['log'])/3600:.1f} hours on a 4-core CPU (including validation) gives a clear, honestly bounded baseline. For context, nnU-Net reports roughly 0.7 Dice on the official MSD lung test set; that set differs from our internal split, so the numbers are not directly comparable. We release code, tests, the 3D viewer and every number in this report as machine-generated files. This is a research prototype and not a diagnostic device.</p>
 </section>
 
@@ -298,7 +328,8 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
 <figure>{img(os.path.join(OUT, 'fig', 'fig_qualitative.png') if os.path.exists(os.path.join(OUT, 'fig', 'fig_qualitative.png')) else os.path.join('results/msd', 'fig_qualitative.png'))}<figcaption><b>Figure 4.</b> Best, median and worst test patients (axial slice with the largest expert-tumor area). Orange: expert; cyan: 3D U-Net (default post-processing).</figcaption></figure>
 {table_cases}
 <figure>{img(os.path.join(OUT, 'fig', 'fig_failure.png'))}<figcaption><b>Figure 6.</b> Failure analysis of the largest test tumor on the 1.5 mm grid. Orange: expert tumor; cyan: predicted tumor; blue: threshold-derived lung label.</figcaption></figure>
-<h3>4.1 Anatomy-level reconstruction</h3>
+{ablation}
+<h3>4.3 Anatomy-level reconstruction</h3>
 <p>{recon_notes}Figure 5 shows reconstructions from real CT. Lobes, airway tree with centreline and endpoints, arteries, veins and tumor are all in patient RAS coordinates, so they can be loaded straight into 3D Slicer or the web viewer. Table 4 summarises the derived anatomy.</p>
 {table_recon}
 {figs_recon}
@@ -308,7 +339,7 @@ Mean with bootstrap 95% CI over patients. HD95 in mm. Lesion sensitivity and FP/
 <p><b>What the numbers mean.</b> nnU-Net reports roughly 0.7 Dice on this task <a href="#r2">[2]</a>, but on the official MSD test set (hidden labels). Ours is a {n_test}-patient internal split of the labelled data, so the two cannot be ranked against each other. Our model has about {tr['params']/1e6:.0f}M parameters and trained for {args['epochs']} short CPU epochs; nnU-Net's default is 1000 GPU epochs with a five-fold ensemble. We do not claim state-of-the-art accuracy. The value of this work is a transparent, bounded baseline. The controls show the score is real (shuffled labels near 0), non-trivial (above the threshold rule) and limited partly by our own resampling (the ceiling is below 1 for small tumors).</p>
 <p><b>Failure modes.</b> {failure_text}</p>
 <p><b>Limitations.</b> (1) A single split with {n_test} test patients; the confidence intervals are wide, and cross-validation would be better. (2) No external test set: MSD comes from one institution. (3) Anatomy labels come from TotalSegmentator and are not checked against experts here. The airway generation count comes from a pruned skeleton and is an approximation. Values above about 10 (Table 4 reaches {max(r.get("airway_tree", {}).get("max_generation", 0) for r in recon.values()) if recon else 0}) exceed what CT normally resolves and probably reflect skeleton loops, not real branching. (4) The lung class is threshold-derived, not expert-drawn. (5) The system segments tumors that are already known to be present. It does not tell malignant from benign nodules and must not be used for diagnosis or screening. (6) Chest X-ray is supported only for lung-field segmentation in the codebase; this report does not evaluate it.</p>
-<p><b>Future work.</b> An anatomical lung class (see failure analysis), five-fold cross-validation, longer GPU training, external validation on LIDC-IDRI/NSCLC-Radiomics, and expert review of the anatomy meshes.</p></section>
+<p><b>Future work.</b> An anatomical lung class combined with explicit suppression of hilar/mediastinal false positives (Section 4.2), five-fold cross-validation, longer GPU training, external validation on LIDC-IDRI/NSCLC-Radiomics, and expert review of the anatomy meshes.</p></section>
 
 <section><h2>6&nbsp; Conclusion</h2>
 <p>We present a small, CPU-trainable 3D U-Net and an anatomy-level reconstruction pipeline for lung tumor CT, evaluated with a protocol designed to reveal false success. The code, tests, viewer and every number in this report are generated from the public repository.</p></section>

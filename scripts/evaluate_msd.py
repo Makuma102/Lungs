@@ -134,7 +134,7 @@ def main():
              "ceiling_dice": dice(ceil, g)}
         rows.append(r)
         # keep memory bounded: bit-packed masks for the shuffled control, one 2D slice for figures
-        z = int(np.argmax((g | p).sum((0, 1)))) if (g | p).any() else hu.shape[2] // 2
+        z = int(np.argmax(g.sum((0, 1)))) if g.any() else hu.shape[2] // 2  # largest expert-tumor slice
         masks[c] = {"shape": g.shape, "g": np.packbits(g), "p": np.packbits(p),
                     "slice": (hu[:, :, z].copy(), g[:, :, z].copy(), p[:, :, z].copy())}
         del hu, ceil

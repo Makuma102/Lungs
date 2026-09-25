@@ -193,6 +193,8 @@ function build(d){
     mesh.renderOrder = kind === "lobe" ? 3 : 1; mesh.userData.kind = kind;
     objs[key] = mesh; root.add(mesh); tris += m.nf;
   }
+  // reset the previous case's offset first: expandByObject uses world coordinates
+  root.position.set(0, 0, 0); root.rotation.set(0, 0, 0); root.updateMatrixWorld(true);
   box = new THREE.Box3();
   for (const k in objs) if (k.startsWith("lung_")) box.expandByObject(objs[k]);
   if (box.isEmpty()) box.setFromObject(root);

@@ -48,7 +48,9 @@ def totalseg(ct, anat, vessels=True):
     # all six outputs must exist: an interrupted run can leave a partial set
     if not all(os.path.exists(os.path.join(anat, "total", r + ".nii.gz")) for r in LOBE_ROI):
         subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "total"), "--fast",
-                               "--roi_subset", *LOBE_ROI, "-d", "cpu"])
+                               "--roi_subset", *LOBE_ROI, "-d", "cpu",
+                               # multi-process saving deadlocked / left partial outputs in this container
+                               "--nr_thr_resamp", "1", "--nr_thr_saving", "1"])
     out = os.path.join(anat, "vessels")
     if vessels and not (os.path.exists(os.path.join(out, "lung_airways.nii.gz"))
                                 or os.path.exists(os.path.join(out, "lung_vessels.nii.gz"))):

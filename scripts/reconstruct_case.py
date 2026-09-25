@@ -45,7 +45,8 @@ def _lung_crop(ct, anat, margin_mm=15):
 
 
 def totalseg(ct, anat, vessels=True):
-    if not os.path.exists(os.path.join(anat, "total", "trachea.nii.gz")):
+    # all six outputs must exist: an interrupted run can leave a partial set
+    if not all(os.path.exists(os.path.join(anat, "total", r + ".nii.gz")) for r in LOBE_ROI):
         subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "total"), "--fast",
                                "--roi_subset", *LOBE_ROI, "-d", "cpu"])
     out = os.path.join(anat, "vessels")

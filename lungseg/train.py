@@ -117,6 +117,8 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--val-every", type=int, default=1)
+    ap.add_argument("--resume", action="store_true", help="continue from <out>/last.pt if present")
+    ap.add_argument("--stop-after", type=int, default=None, help=argparse.SUPPRESS)  # tests: simulate a crash
     args = ap.parse_args(argv)
 
     if args.base is None:
@@ -142,8 +144,25 @@ def main(argv=None):
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, args.lr, total_steps=args.epochs * len(dl))
 
-    best, log = -1.0, []
-    for ep in range(args.epochs):
+    best, log, start = -1.0, [], 0
+    last_p = os.path.join(args.out, "last.pt")
+    if args.resume and os.path.exists(last_p):  # survive container restarts
+        ck = torch.load(last_p, weights_only=False)
+        model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sched.load_state_dict(ck["sched"])
+        best, log, start = ck["best"], ck["log"], ck["epoch"] + 1
+        torch.set_rng_state(ck["torch_rng"]); np.random.set_state(ck["np_rng"])
+        if hasattr(ds, "rng"):
+            ds.rng.bit_generator.state = ck["ds_rng"]
+        print(f"resumed from epoch {ck['epoch']} (best val {best:.3f})", flush=True)
+
+    def checkpoint(ep):
+        torch.save({"model": model.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
+                    "epoch": ep, "best": best, "log": log, "torch_rng": torch.get_rng_state(),
+                    "np_rng": np.random.get_state(), "ds_rng": getattr(getattr(ds, "rng", None), "bit_generator", None)
+                    and ds.rng.bit_generator.state, "args": vars(args)}, last_p + ".tmp")
+        os.replace(last_p + ".tmp", last_p)  # atomic: a restart mid-save cannot corrupt it
+
+    for ep in range(start, args.epochs):
         model.train(); t0 = time.time(); tot = 0.0
         for x, y in dl:
             x, y = x.to(device), y.to(device)
@@ -154,6 +173,7 @@ def main(argv=None):
         if (ep + 1) % args.val_every and ep != args.epochs - 1:
             print(f"ep {ep:3d} loss {tot / len(dl):.4f} ({time.time() - t0:.0f}s)", flush=True)
             log.append({"epoch": ep, "loss": tot / len(dl), "sec": time.time() - t0})
+            checkpoint(ep)
             continue
         s = summarize(evaluate(model, vav, vas, device))
         score = (s["lung_dice"]["mean"] + s.get("tumor_dice", {"mean": 0})["mean"]) / 2
@@ -163,6 +183,9 @@ def main(argv=None):
         if score > best:
             best = score
             torch.save({"model": model.state_dict(), "args": vars(args)}, os.path.join(args.out, "best.pt"))
+        checkpoint(ep)
+        if args.stop_after is not None and ep >= args.stop_after:
+            return None  # simulated interruption (tests only)
 
     model.load_state_dict(torch.load(os.path.join(args.out, "best.pt"))["model"])
     res = summarize(evaluate(model, tev, tes, device))

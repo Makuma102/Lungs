@@ -107,6 +107,8 @@ def mesh(mask, spacing, step=1):
     if mask.sum() < 8:
         return None, None
     m = ndimage.gaussian_filter(mask.astype(np.float32), 0.8)
+    if m.max() < 0.5:  # thin/scattered mask vanishes under smoothing: no surface
+        return None, None
     verts, faces, _, _ = measure.marching_cubes(np.pad(m, 1), 0.5, spacing=spacing, step_size=step)
     return verts - np.asarray(spacing), faces
 

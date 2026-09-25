@@ -19,8 +19,26 @@ from scipy import ndimage
 from .data import lungs_from_hu, window_hu
 
 
+LOBES = ["lung_upper_lobe_right", "lung_middle_lobe_right", "lung_lower_lobe_right",
+         "lung_upper_lobe_left", "lung_lower_lobe_left"]
+
+
+def anatomical_lung(img_path, anat_root="data/anat"):
+    """Union of the five TotalSegmentator lobes, in RAS (canonical) orientation.
+    Unlike the air threshold, lobes include the tumor bed and consolidation."""
+    case = os.path.basename(img_path).replace(".nii.gz", "")
+    m = None
+    for lobe in LOBES:
+        f = os.path.join(anat_root, case, "total", lobe + ".nii.gz")
+        if not os.path.exists(f):
+            raise FileNotFoundError(f"missing lobe mask {f}")
+        a = np.asanyarray(nib.as_closest_canonical(nib.load(f)).dataobj) > 0
+        m = a if m is None else (m | a)
+    return m
+
+
 def prep_case(args):
-    img_path, out_dir, spacing = args
+    img_path, out_dir, spacing, lung_source = args
     case = os.path.basename(img_path).replace(".nii.gz", "")
     out = os.path.join(out_dir, case + ".npz")
     if os.path.exists(out):
@@ -31,7 +49,10 @@ def prep_case(args):
     tum = np.asanyarray(lab_img.dataobj) > 0
     zooms = np.array(ct.header.get_zooms()[:3], float)
     # lungs_from_hu expects slices on axis 0
-    lung = np.moveaxis(lungs_from_hu(np.moveaxis(hu, 2, 0)), 0, 2) | tum
+    if lung_source == "anat":
+        lung = anatomical_lung(img_path) | tum
+    else:
+        lung = np.moveaxis(lungs_from_hu(np.moveaxis(hu, 2, 0)), 0, 2) | tum
     nz = np.argwhere(lung)
     m = np.ceil(10 / zooms).astype(int)
     lo = np.maximum(nz.min(0) - m, 0)
@@ -68,11 +89,13 @@ def main():
     ap.add_argument("--out", default="data/prep")
     ap.add_argument("--spacing", type=float, default=1.5)
     ap.add_argument("--workers", type=int, default=2)
+    ap.add_argument("--lung-source", choices=["threshold", "anat"], default="threshold",
+                    help="lung class from HU threshold (v1) or TotalSegmentator lobes (v2)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     imgs = sorted(glob.glob(os.path.join(a.root, "imagesTr", "lung_*.nii.gz")))
     with ProcessPoolExecutor(a.workers) as ex:
-        for case, msg in ex.map(prep_case, [(p, a.out, a.spacing) for p in imgs]):
+        for case, msg in ex.map(prep_case, [(p, a.out, a.spacing, a.lung_source) for p in imgs]):
             print(case, msg, flush=True)
 
 

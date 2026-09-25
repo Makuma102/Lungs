@@ -94,3 +94,22 @@ def test_sliding_window_matches_shape():
     vol = np.random.default_rng(0).random((40, 50, 45)).astype(np.float32)
     lab, prob = _predict_3d(m, vol, "cpu", patch=(16, 32, 32))
     assert lab.shape == prob.shape == vol.shape and np.isfinite(prob).all()
+
+
+def test_resume_continues_training(tmp_path):
+    """Interrupted run + --resume must reach the same final state as the log length implies."""
+    import json
+    from lungseg.train import main
+    common = ["--epochs", "2", "--size", "64", "--depth-slices", "8", "--n-train", "2", "--n-val", "1",
+              "--n-test", "1", "--batch", "4", "--base", "8", "--out", str(tmp_path)]
+    assert main(common + ["--stop-after", "0"]) is None   # "crash" after epoch 0
+    main(common + ["--resume"])                     # resume, run epoch 2 only
+    log = json.load(open(tmp_path / "results.json"))["log"]
+    assert [r["epoch"] for r in log] == [0, 1]
+
+
+def test_mesh_of_scattered_voxels_does_not_crash():
+    from lungseg.reconstruct3d import mesh
+    m = np.zeros((20, 20, 20), bool)
+    m[::4, ::4, ::4] = True   # 125 isolated voxels: >= 8 voxels but no surface after smoothing
+    assert mesh(m, (1, 1, 1)) == (None, None)

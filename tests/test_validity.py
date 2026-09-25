@@ -266,3 +266,11 @@ def test_postprocess_options_largest_and_probability():
     assert (big[5:8, 40:44, 40:44] != 2).all() and (big[5:12, 10:20, 10:20] == 2).all()
     conf = postprocess(lab, (1, 1, 1), min_tumor_mm3=5, tumor_prob=prob, min_mean_prob=0.8)
     assert (conf[5:8, 40:44, 40:44] != 2).all() and (conf[5:12, 10:20, 10:20] == 2).all()
+
+
+def test_scripts_use_the_checkpoints_own_preprocessing():
+    """Regression: scripts once hard-coded data/prep, silently feeding a model
+    trained on another preprocessing (v2 val Dice read 0.60 instead of 0.77)."""
+    import glob
+    for f in glob.glob("scripts/*.py"):
+        assert '"data/prep"' not in open(f).read(), f

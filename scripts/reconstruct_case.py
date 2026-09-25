@@ -92,7 +92,7 @@ def main():
         args = st["args"]
         model = SmallUNet3D(base=args["base"], anisotropic=not args.get("isotropic", False))
         model.load_state_dict(st["model"])
-        npz = os.path.join("data/prep", a.case + ".npz")
+        npz = os.path.join(args["root"], a.case + ".npz")  # preprocessing this model was trained on
         d = np.load(npz)
         sel_p = "results/msd/postproc_selection.json"
         rule = json.load(open(sel_p))["selected"]["rule"] if os.path.exists(sel_p) else {}

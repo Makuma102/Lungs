@@ -40,7 +40,7 @@ def main():
     assert not test & set(val)
     preds = []
     for c in val:
-        d = np.load(os.path.join("data/prep", c + ".npz"))
+        d = np.load(os.path.join(args["root"], c + ".npz"))  # preprocessing this model was trained on
         lab, prob = predict_volume(model, d["img"].astype(np.float32))
         preds.append((c, lab, prob, d["lab"], tuple(d["spacing"])))
         print("predicted", c, flush=True)

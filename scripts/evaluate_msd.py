@@ -100,7 +100,7 @@ def main():
     rows, masks = [], {}
     for c in test_cases:
         ct_p = os.path.join(ROOT, "imagesTr", c + ".nii.gz")
-        npz = os.path.join("data/prep", c + ".npz")
+        npz = os.path.join(args["root"], c + ".npz")  # preprocessing this model was trained on
         d = np.load(npz)
         cache = os.path.join(a.out, "pred_cache", c + ".npz")
         use_cache = a.rescore and os.path.exists(cache)

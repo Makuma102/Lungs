@@ -32,7 +32,7 @@ def main():
     st = torch.load(a.ckpt, weights_only=False)
     m = SmallUNet3D(base=st["args"]["base"], anisotropic=not st["args"].get("isotropic", False))
     m.load_state_dict(st["model"])
-    d = np.load(os.path.join("data/prep", a.case + ".npz"))
+    d = np.load(os.path.join(st["args"]["root"], a.case + ".npz"))
     img, lab = d["img"].astype(np.float32), d["lab"]
     raw, _ = predict_volume(m, img)
     gt = lab == 2

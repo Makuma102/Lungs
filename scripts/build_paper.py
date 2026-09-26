@@ -344,6 +344,12 @@ We therefore keep v1 as the main model. The ablation also shows why a small vali
 <section><h2>6&nbsp; Conclusion</h2>
 <p>We present a small, CPU-trainable 3D U-Net and an anatomy-level reconstruction pipeline for lung tumor CT, evaluated with a protocol designed to reveal false success. The code, tests, viewer and every number in this report are generated from the public repository.</p></section>
 
+<section><h2>Statistical analysis</h2>
+<p>Per-patient metrics are summarised by their mean with a nonparametric bootstrap 95% confidence interval (resampling patients, 2000&ndash;5000 replicates). Paired model comparisons use per-patient differences with a bootstrap CI and a two-sided Wilcoxon signed-rank test. No correction for multiple comparisons was applied, and p-values are reported as descriptive only. With 13 test patients per split the study is not powered to detect small differences, so we emphasise interval estimates over significance tests. All analysis code is in the repository.</p></section>
+
+<section><h2>Ethics, data and code availability</h2>
+<p>This study uses only the publicly released, de-identified Medical Segmentation Decathlon Task06 data (CC-BY-SA 4.0), so no ethics approval was required. Anatomical labels were generated with the publicly available TotalSegmentator models. All code, tests, trained-model configuration, result files and the interactive viewer are in the project repository. Every number in this report is generated from those files by <code>scripts/build_paper.py</code>.</p></section>
+
 <section><h2>Reproducibility</h2>
 <pre>python scripts/download_datasets.py msd
 python -m lungseg.prep_msd
@@ -365,7 +371,32 @@ python scripts/build_paper.py --run-tests</pre>
 <li id="r6">Setio AAA, Traverso A, de Bel T, et al. Validation, comparison, and combination of algorithms for automatic detection of pulmonary nodules in CT: the LUNA16 challenge. Medical Image Analysis 42, 1&ndash;13 (2017).</li>
 <li id="r7">Maier-Hein L, Reinke A, Godau P, et al. Metrics reloaded: recommendations for image analysis validation. Nature Methods 21, 195&ndash;212 (2024).</li>
 <li id="r8">Taubin G. A signal processing approach to fair surface design. SIGGRAPH 1995.</li>
+<li id="r9">Mongan J, Moy L, Kahn CE Jr. Checklist for Artificial Intelligence in Medical Imaging (CLAIM): a guide for authors and reviewers. Radiology: Artificial Intelligence 2(2), e200029 (2020).</li>
 </ol></section>
+
+<section class="appendix"><h2>Appendix B &nbsp;CLAIM checklist (abridged)</h2>
+<p>Checklist for Artificial Intelligence in Medical Imaging (Mongan et al., 2020; 2024 update), with where each item is addressed or why it is not.</p>
+<table class="small"><thead><tr><th>Item</th><th>Status</th><th>Where / note</th></tr></thead><tbody>
+<tr><td>Study design and objective</td><td>Reported</td><td>&sect;1, &sect;3</td></tr>
+<tr><td>Data source, licence, de-identification</td><td>Reported</td><td>&sect;3.1, Ethics</td></tr>
+<tr><td>Eligibility, inclusion and exclusion</td><td>Partial</td><td>All 63 labelled MSD cases were used; MSD's own selection criteria are not published in detail</td></tr>
+<tr><td>Demographics and scanner characteristics</td><td>Not available</td><td>Not released with MSD</td></tr>
+<tr><td>Reference standard (ground truth)</td><td>Reported</td><td>MSD expert labels; annotator count and experience are not released</td></tr>
+<tr><td>Preprocessing</td><td>Reported</td><td>&sect;3.2</td></tr>
+<tr><td>Data partitions and leakage control</td><td>Reported</td><td>&sect;3.1 (patient-level, seeded, test-enforced); cross-validation</td></tr>
+<tr><td>Model architecture and initialisation</td><td>Reported</td><td>&sect;3.3</td></tr>
+<tr><td>Training details and hyperparameters</td><td>Reported</td><td>&sect;3.3, Reproducibility</td></tr>
+<tr><td>Model and post-processing selection</td><td>Reported</td><td>&sect;3.3, &sect;3.5 (validation only)</td></tr>
+<tr><td>Metrics and their definitions</td><td>Reported</td><td>&sect;3.7</td></tr>
+<tr><td>Statistical methods and uncertainty</td><td>Reported</td><td>Statistical analysis</td></tr>
+<tr><td>Baselines and controls</td><td>Reported</td><td>Tables 1&ndash;2; nnU-Net kit provided but not run (no GPU)</td></tr>
+<tr><td>Robustness and failure analysis</td><td>Reported</td><td>&sect;4, Fig. 6, &sect;4.2</td></tr>
+<tr><td>External validation</td><td>Not done</td><td>No external data reachable in our environment; Limitations</td></tr>
+<tr><td>Explainability</td><td>Not done</td><td>Only qualitative overlays</td></tr>
+<tr><td>Clinical utility or reader study</td><td>Not done</td><td>Limitations</td></tr>
+<tr><td>Code and data availability</td><td>Reported</td><td>Availability statement</td></tr>
+<tr><td>Registration and protocol</td><td>Not applicable</td><td>Retrospective technical study</td></tr>
+</tbody></table></section>
 
 <section class="appendix"><h2>Appendix A &nbsp;Synthetic phantom</h2>
 <p>During development we used a procedural chest-CT phantom (body, fat, lungs with vessel-like texture, spine, 0&ndash;3 lobulated nodules, Gaussian noise) to test the code offline. {phantom}</p></section>

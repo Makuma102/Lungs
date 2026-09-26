@@ -1,0 +1,160 @@
+{
+ "n": 13,
+ "n_with_prediction": 13,
+ "prediction_key": "p_sel",
+ "diameter_all": {
+  "n": 13,
+  "bias": -11.039448003965804,
+  "loa": [
+   -54.169384382457906,
+   32.0904883745263
+  ],
+  "mae": 12.91519610080175,
+  "pearson_r": 0.5432132124997868
+ },
+ "diameter_detected": {
+  "n": 13,
+  "bias": -11.039448003965804,
+  "loa": [
+   -54.169384382457906,
+   32.0904883745263
+  ],
+  "mae": 12.91519610080175,
+  "pearson_r": 0.5432132124997868
+ },
+ "within_5mm": 0.5384615384615384,
+ "lobe_agreement": 0.9230769230769231,
+ "lobe_n": 13,
+ "rows": [
+  {
+   "case": "lung_044",
+   "d_gt_mm": 41.339421305894575,
+   "d_pred_mm": 31.246288842136916,
+   "v_gt_ml": 12.60239809155464,
+   "v_pred_ml": 9.522629565238953,
+   "lobe_gt": "lung_lower_lobe_left",
+   "lobe_pred": "lung_lower_lobe_left",
+   "dice": 0.7280256270021095
+  },
+  {
+   "case": "lung_055",
+   "d_gt_mm": 101.15149110284312,
+   "d_pred_mm": 46.64251171422964,
+   "v_gt_ml": 28.578580932199955,
+   "v_pred_ml": 22.15453611087799,
+   "lobe_gt": "lung_upper_lobe_left",
+   "lobe_pred": "lung_upper_lobe_left",
+   "dice": 0.7816293369866505
+  },
+  {
+   "case": "lung_029",
+   "d_gt_mm": 25.229745953201032,
+   "d_pred_mm": 27.3908568527823,
+   "v_gt_ml": 3.4943653049468995,
+   "v_pred_ml": 6.329752443313598,
+   "lobe_gt": "lung_upper_lobe_left",
+   "lobe_pred": "lung_upper_lobe_left",
+   "dice": 0.6796591733139956
+  },
+  {
+   "case": "lung_038",
+   "d_gt_mm": 29.481191037676886,
+   "d_pred_mm": 22.00019975051363,
+   "v_gt_ml": 5.2154541015625,
+   "v_pred_ml": 3.1890869140625,
+   "lobe_gt": "lung_upper_lobe_right",
+   "lobe_pred": "lung_upper_lobe_right",
+   "dice": 0.5704268292682927
+  },
+  {
+   "case": "lung_014",
+   "d_gt_mm": 50.973781474401406,
+   "d_pred_mm": 48.53251114360298,
+   "v_gt_ml": 31.134679213911294,
+   "v_pred_ml": 41.83755871191621,
+   "lobe_gt": "lung_upper_lobe_right",
+   "lobe_pred": "lung_upper_lobe_right",
+   "dice": 0.7367557708237272
+  },
+  {
+   "case": "lung_028",
+   "d_gt_mm": 86.39293679702278,
+   "d_pred_mm": 22.4791952459348,
+   "v_gt_ml": 151.33065261483193,
+   "v_pred_ml": 0.6487220097780229,
+   "lobe_gt": "lung_lower_lobe_left",
+   "lobe_pred": "lung_lower_lobe_left",
+   "dice": 0.008512423537054078
+  },
+  {
+   "case": "lung_043",
+   "d_gt_mm": 27.20702983112832,
+   "d_pred_mm": 21.7247749883644,
+   "v_gt_ml": 2.8306106643676756,
+   "v_pred_ml": 2.692929287910461,
+   "lobe_gt": "lung_upper_lobe_right",
+   "lobe_pred": "lung_upper_lobe_right",
+   "dice": 0.7154348919054802
+  },
+  {
+   "case": "lung_078",
+   "d_gt_mm": 36.83425703465627,
+   "d_pred_mm": 35.897788136240415,
+   "v_gt_ml": 5.664196065068245,
+   "v_pred_ml": 7.9217505445480345,
+   "lobe_gt": "lung_lower_lobe_left",
+   "lobe_pred": "lung_lower_lobe_left",
+   "dice": 0.7720200421940928
+  },
+  {
+   "case": "lung_096",
+   "d_gt_mm": 12.916914876705357,
+   "d_pred_mm": 12.383526842943446,
+   "v_gt_ml": 0.7377379506826401,
+   "v_pred_ml": 0.7736320331692697,
+   "lobe_gt": "lung_lower_lobe_right",
+   "lobe_pred": "lung_upper_lobe_right",
+   "dice": 0.0
+  },
+  {
+   "case": "lung_059",
+   "d_gt_mm": 21.3911204576794,
+   "d_pred_mm": 19.2030121285527,
+   "v_gt_ml": 1.5615297108888626,
+   "v_pred_ml": 1.9483536928892136,
+   "lobe_gt": "lung_upper_lobe_left",
+   "lobe_pred": "lung_upper_lobe_left",
+   "dice": 0.7215434083601286
+  },
+  {
+   "case": "lung_075",
+   "d_gt_mm": 34.682390541217956,
+   "d_pred_mm": 31.19523552193185,
+   "v_gt_ml": 11.326104999542236,
+   "v_pred_ml": 10.3982692527771,
+   "lobe_gt": "lung_upper_lobe_left",
+   "lobe_pred": "lung_upper_lobe_left",
+   "dice": 0.8666242333063303
+  },
+  {
+   "case": "lung_009",
+   "d_gt_mm": 60.82490576046658,
+   "d_pred_mm": 70.85615749031896,
+   "v_gt_ml": 89.46446956539154,
+   "v_pred_ml": 116.55001205253602,
+   "lobe_gt": "lung_upper_lobe_right",
+   "lobe_pred": "lung_upper_lobe_right",
+   "dice": 0.7449680717738566
+  },
+  {
+   "case": "lung_093",
+   "d_gt_mm": 25.012204052472065,
+   "d_pred_mm": 20.372507516258278,
+   "v_gt_ml": 2.243078862428665,
+   "v_pred_ml": 2.3494219172000887,
+   "lobe_gt": "lung_lower_lobe_right",
+   "lobe_pred": "lung_lower_lobe_right",
+   "dice": 0.6106073779654702
+  }
+ ]
+}

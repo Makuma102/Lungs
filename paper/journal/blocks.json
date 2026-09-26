@@ -1,0 +1,873 @@
+[
+{
+"t": "title",
+"text": "A Reproducible Resource-Efficient Framework for 3D Lung Tumor Segmentation and Anatomy-Aware Reconstruction with False-Success Controls"
+},
+{
+"t": "authors",
+"text": "Kien Nguyen\u00b9 \u00b7 [Supervisor]\u00b9  \u2014  \u00b9[Affiliation]  \u00b7  Manuscript draft, 2026-09-26"
+},
+{
+"t": "note",
+"text": "Draft note: five-fold cross-validation over all 63 patients is running. The numbers below are from the development split (fold 0, 13 patients) and will be replaced automatically when cross-validation completes."
+},
+{
+"t": "h1",
+"text": "Abstract"
+},
+{
+"t": "p",
+"text": "Background: Automated lung tumor segmentation on CT supports volumetry, response assessment and treatment planning. Published results, however, are often hard to reproduce and can overstate performance through leakage, lenient metrics or missing baselines. Methods: We developed a compact 3D U-Net (3.2 M parameters) that trains on a 4-core CPU, and an anatomy-aware reconstruction pipeline that fuses the predicted tumor with the pulmonary lobes, airway tree and pulmonary vessels in patient coordinates. Using the 63 labelled CT scans of the Medical Segmentation Decathlon lung task, we evaluated the model on the held-out development split (13 patients) at native resolution. The evaluation includes negative controls (empty prediction, intensity-threshold baseline, shuffled labels), a resampling-ceiling analysis, validation-only post-processing selection, patient-level bootstrap confidence intervals, tumor-size stratification, clinically oriented agreement (longest diameter, lobe localisation) and a controlled ablation of the lung representation. Results: Tumor Dice was 0.610 (95% CI 0.450\u20130.736) with default post-processing and 0.658 (95% CI 0.485\u20130.787) with a largest-component rule selected on validation data, which reduced false-positive components from 1.92 to 0.08 per scan. The tumor was detected in 11 of 13 patients. The threshold baseline reached 0.041, the shuffled-label control 0.000, and the resampling ceiling 0.946. Predicted and expert longest diameters differed by -11.0 mm on average (median absolute error 4.6 mm), and the tumor was assigned to the correct lobe in 92% of patients. Replacing the threshold-derived lung class with anatomical lobes improved validation performance but lowered test Dice (paired difference -0.068, 95% CI -0.184 to +0.039). Conclusions: A resource-efficient model evaluated with explicit false-success controls gives a transparent, bounded baseline for lung tumor segmentation and a practical route to anatomy-aware 3D visualisation. All code, tests and result files are released, and every number in this manuscript is generated from them."
+},
+{
+"t": "p",
+"text": "Keywords: lung cancer; computed tomography; 3D U-Net; tumor segmentation; 3D reconstruction; reproducibility; false success; negative controls"
+},
+{
+"t": "h1",
+"text": "1. Introduction"
+},
+{
+"t": "h2",
+"text": "1.1. Clinical and technological background"
+},
+{
+"t": "p",
+"text": "Lung cancer remains the leading cause of cancer death worldwide [1]. Computed tomography (CT) is central to its detection, staging and follow-up, and low-dose CT screening reduces lung-cancer mortality [2, 3]. Treatment decisions and response assessment rely on measurements of the tumor, most often its longest diameter under RECIST 1.1 [4], and increasingly on its full volume. Manual delineation is slow and varies between readers. This has motivated automated segmentation that is fast, consistent, and accurate enough for volumetry and planning."
+},
+{
+"t": "h2",
+"text": "1.2. Emergence of 3D deep learning"
+},
+{
+"t": "p",
+"text": "Convolutional networks now dominate medical image segmentation [5]. The U-Net [6] and its volumetric extensions [7, 8] made dense 3D segmentation practical. Nested, attention and transformer variants have since been proposed [9, 10, 11]. nnU-Net [12] showed that careful, self-configuring training of a plain U-Net matches or beats most architectural innovations. A recent large re-evaluation confirmed that many claimed improvements disappear under rigorous validation [13]. State-of-the-art pipelines, however, assume GPU training for days, which limits their use in resource-constrained clinical and research settings."
+},
+{
+"t": "h2",
+"text": "1.3. Problem of reproducibility and false success"
+},
+{
+"t": "p",
+"text": "Medical imaging AI suffers from methodological failures that inflate reported performance [27]. Data leakage alone has undermined results across many fields [28]. Segmentation metrics have well-documented pitfalls: Dice is undefined or misleading for empty masks, boundary distances are unbounded when a structure is missed, and lesion-level counting depends on matching rules [25, 26]. We use the term false success for a result that looks good because of how it was measured rather than what the model does. Examples are a lenient detection criterion, a metric averaged over cases with nothing to find, or a threshold tuned on the test set. Reporting guidelines such as CLAIM [29] ask authors to address these issues, but explicit negative controls remain rare in segmentation studies."
+},
+{
+"t": "h2",
+"text": "1.4. From segmentation to anatomy-aware reconstruction"
+},
+{
+"t": "p",
+"text": "A tumor mask alone answers \u201chow large?\u201d, but surgical and bronchoscopic planning also asks \u201cwhere, relative to what?\u201d: which lobe, how close to the airway and vessels. Open models such as TotalSegmentator [19] now segment lobes, airways and pulmonary vessels robustly, and platforms such as 3D Slicer [20] display such structures interactively. Combining a tumor model with these anatomical models, in one coordinate system with quantitative outputs, is a natural but rarely evaluated step."
+},
+{
+"t": "h2",
+"text": "1.5. Research gap"
+},
+{
+"t": "p",
+"text": "We found no study that combines (i) a compact 3D tumor segmentation model trainable without a GPU, (ii) anatomy-level reconstruction of the tumor together with lobes, airway tree and vessels, and (iii) an evaluation framework whose negative controls, resampling ceiling and uncertainty estimates are designed to expose false success, with all numbers generated from released code."
+},
+{
+"t": "h2",
+"text": "1.6. Research objectives"
+},
+{
+"t": "bullets",
+"items": [
+"Develop a compact 3D U-Net capable of training and inference under CPU-constrained conditions.",
+"Develop an anatomy-level reconstruction pipeline integrating tumor segmentation with pulmonary anatomy.",
+"Establish a rigorous evaluation framework incorporating negative controls, resampling ceiling analysis and patient-level uncertainty estimation.",
+"Characterize model failure modes and quantify the effect of post-processing and anatomical lung representations."
+]
+},
+{
+"t": "h2",
+"text": "1.7. Contributions"
+},
+{
+"t": "bullets",
+"items": [
+"A 3.2 M-parameter 3D U-Net and training recipe that runs on a 4-core CPU (about 8 min per epoch), with resumable training and deterministic splits.",
+"An anatomy-aware reconstruction pipeline producing patient-space meshes of lobes, airway tree (with pruned centreline, bifurcations, endpoints and branch generations), pulmonary arteries and veins and the tumor, with a structured report and an interactive web viewer.",
+"A false-success evaluation protocol: native-resolution metrics, an empty-prediction and an intensity-threshold baseline, a shuffled-label control, a resampling ceiling, a size-filtered and coverage-based lesion matching rule, validation-only post-processing selection, and patient-level bootstrap confidence intervals, enforced by an automated test suite (36 tests).",
+"A negative ablation result: an anatomical lung representation improved validation scores but reduced test performance. We report it with a paired analysis and a characterisation of the failure.",
+"Full release of code, tests, result files and manuscript generator: every number in this paper is produced from the released result files."
+]
+},
+{
+"t": "h1",
+"text": "2. Related works"
+},
+{
+"t": "h2",
+"text": "2.1. The 2D and 3D medical image segmentation"
+},
+{
+"t": "p",
+"text": "Encoder\u2013decoder networks with skip connections [6] remain the backbone of medical segmentation. 2D models process slices independently and ignore through-plane context. 3D models [7, 8] capture volumetric shape at a higher memory cost. Architectural refinements [9, 10, 11] report gains that are often small relative to training and evaluation choices [12, 13]. We therefore use a plain 3D U-Net and put our effort into training under constraints and into evaluation."
+},
+{
+"t": "h2",
+"text": "2.2. Lung tumor segmentation"
+},
+{
+"t": "p",
+"text": "Public benchmarks include LIDC-IDRI [15] and LUNA16 [16] for nodules, NSCLC-Radiomics [17] for tumors, and the Medical Segmentation Decathlon (MSD) lung task [14]. The MSD lung task is regarded as one of the hardest Decathlon tasks, because the targets are small and heterogeneous, and nnU-Net reported a lung-tumor Dice of roughly 0.7 on its hidden test set [12, 14]. Most published MSD lung results require GPU training and rarely report negative controls or patient-level uncertainty."
+},
+{
+"t": "h2",
+"text": "2.3. Anatomical lung segmentation"
+},
+{
+"t": "p",
+"text": "Lung-field segmentation is considered largely solved when training data are diverse [18]. Lobe, airway and vessel segmentation are harder. TotalSegmentator [19] provides open models for the five lobes, trachea, airways and pulmonary arteries and veins, and we use it as the source of anatomy. Airway-tree analysis traditionally uses skeletonisation [23] and Weibel-style generation counting [24]."
+},
+{
+"t": "h2",
+"text": "2.4. 3D reconstruction for clinical visualization"
+},
+{
+"t": "p",
+"text": "Surface reconstruction from voxel masks is usually done with marching cubes [21] followed by smoothing. Taubin \u03bb|\u03bc smoothing [22] removes staircase artefacts without the shrinkage of Laplacian smoothing. Clinical platforms such as 3D Slicer [20] visualise such meshes. Few segmentation studies, however, evaluate the reconstructed anatomy quantitatively or deliver it in a portable, patient-coordinate format."
+},
+{
+"t": "h2",
+"text": "2.5. Reproducibility and trustworthy medical AI"
+},
+{
+"t": "p",
+"text": "Guidelines and critical reviews [29, 27, 25, 26] recommend patient-level splits, appropriate metrics, uncertainty estimates and baselines. Leakage audits [28] show how easily these are violated. Negative controls, meaning analyses that must fail if the pipeline is sound, are standard in experimental science but uncommon in segmentation papers."
+},
+{
+"t": "h2",
+"text": "2.6. Research gap and hypothesis"
+},
+{
+"t": "p",
+"text": "We hypothesised that (H1) a compact 3D U-Net trained on a CPU gives a clinically meaningful, non-trivial baseline on the MSD lung task when evaluated with explicit false-success controls; (H2) validation-selected post-processing can reduce false positives without test-set tuning; and (H3) an anatomical lung representation, which includes the tumor bed, reduces failures on tumors that abut the chest wall or mediastinum."
+},
+{
+"t": "h1",
+"text": "3. Materials and methods"
+},
+{
+"t": "h2",
+"text": "3.1. Overall framework"
+},
+{
+"t": "p",
+"text": "The framework (Fig. 1) has three branches. The segmentation branch preprocesses the CT, runs the compact 3D U-Net with sliding-window inference and post-processing, and maps the tumor mask back to the native grid. The anatomy branch obtains lobes, airways and vessels and fuses them with the tumor into meshes and a structured report. The evaluation branch scores every prediction against the expert label and against a set of controls."
+},
+{
+"t": "img",
+"path": "paper/journal/fig/fig1_framework.png",
+"width": 1.0,
+"caption": [
+{
+"text": "Fig. 1. ",
+"bold": true
+},
+{
+"text": "Overview of the framework: segmentation branch (top), anatomy-aware reconstruction branch (bottom) and evaluation with false-success controls (right)."
+}
+]
+},
+{
+"t": "h2",
+"text": "3.2. Dataset"
+},
+{
+"t": "p",
+"text": "We used the MSD Task06 lung dataset [14]: 63 thin-slice chest CT scans of patients with non-small-cell lung cancer, with expert tumor masks (CC-BY-SA 4.0). The 32 official test scans have hidden labels, so all experiments use the 63 labelled scans. Results in this draft come from a patient-level development split (seed 42): 45 training, 5 validation and 13 test patients. Automated tests assert that no patient appears in more than one partition. All scans are stored in LAS orientation; we convert them to RAS for training and map predictions back to each scan's original grid."
+},
+{
+"t": "h2",
+"text": "3.3. Preprocessing"
+},
+{
+"t": "p",
+"text": "Hounsfield units are clipped to [\u22121000, 400] and scaled to [0, 1]. A lung mask is derived by thresholding at \u2212320 HU, removing air connected to the image border, keeping the two largest components and filling holes. It is used to crop the scan (with a 10 mm margin) and as the lung class, with the tumor label taking precedence. Crops are resampled to 1.5 mm isotropic voxels (trilinear for images, nearest-neighbour for labels), giving a three-class problem: background, lung and tumor."
+},
+{
+"t": "h2",
+"text": "3.4. Compact 3D U-Net architecture"
+},
+{
+"t": "p",
+"text": "The network is a four-level 3D U-Net [7] with base width 12 (feature widths 12, 24, 48, 96 and 192 at the bottleneck) and 3,176,799 trainable parameters. Each block has two 3\u00d73\u00d73 convolutions with instance normalisation and LeakyReLU (slope 0.01). Pooling is isotropic 2\u00d72\u00d72 max-pooling, upsampling uses transposed convolutions with concatenative skip connections, and the bottleneck uses 3D dropout (p = 0.1). Weights are Kaiming-initialised."
+},
+{
+"t": "h2",
+"text": "3.5. Loss function"
+},
+{
+"t": "p",
+"text": "We minimise the sum of a batch-level soft Dice loss over the foreground classes (lung and tumor) and a class-weighted cross-entropy with weights 0.5, 1 and 3 for background, lung and tumor. Computing Dice at batch level keeps the loss stable for patches that contain no tumor."
+},
+{
+"t": "h2",
+"text": "3.6. Training strategy"
+},
+{
+"t": "p",
+"text": "We train with AdamW (learning rate 0.003, weight decay 10\u207b\u2074), a one-cycle schedule, gradient-norm clipping at 12 and batch size 2, for 20 epochs. Each epoch draws 8 random 64\u00d796\u00d796-voxel patches per training patient, 66% of them centred on tumor voxels. Augmentation consists of left\u2013right flips, gamma, contrast and Gaussian noise. The checkpoint with the best validation score (mean of lung and tumor Dice, evaluated every 4 epochs) is kept. Training state is saved atomically every epoch, so runs survive interruptions. On a 4-core CPU an epoch takes about 8 min and a full run about 3.1 h including validation."
+},
+{
+"t": "h2",
+"text": "3.7. Inference"
+},
+{
+"t": "p",
+"text": "Inference uses a sliding window of 96\u00d7128\u00d7128 voxels with 50% overlap and Gaussian importance weighting, with left\u2013right flip test-time augmentation. Tumor probabilities are mapped back to the native CT grid by trilinear interpolation and thresholded at 0.5. An automated test verifies that tiled inference reproduces whole-volume inference exactly for a voxel-wise model."
+},
+{
+"t": "h2",
+"text": "3.8. Post-processing"
+},
+{
+"t": "p",
+"text": "The default rule keeps the two largest lung components and every tumor component of at least 20 mm\u00b3 inside the closed lung hull. Because the default rule produced many false-positive components, we compared 18 alternative rules. These vary the minimum component volume, a minimum mean probability and whether only the largest component is kept, and they were compared on the validation patients only. The selected rule keeps only the largest component (validation Dice 0.723 \u2192 0.731; FP/scan 2.8 \u2192 0.0) and was applied unchanged to the test data. Both rules are reported. Because the first test run motivated this experiment, the selected-rule results are not fully blind, which we state explicitly."
+},
+{
+"t": "h2",
+"text": "3.9. Anatomy-level reconstruction"
+},
+{
+"t": "p",
+"text": "For each patient, the five lobes and trachea come from TotalSegmentator's fast model [19], and the airways, pulmonary arteries and pulmonary veins from its full-resolution lung-vessel model. We run the latter on a lung-cropped CT to fit in 15 GB of memory, then paste the result back. The airway mask is skeletonised in 3D [23], and terminal branches shorter than 5 mm are pruned. Adjacent junction voxels are merged into single bifurcation nodes, and generations are counted from the most superior tracheal point [24]. Surfaces are extracted with marching cubes [21] after Gaussian smoothing in physical units (2 mm for lobes, 0.5\u20130.8 mm for airways, vessels and tumor), followed by Taubin smoothing [22], and are mapped to RAS millimetres. Each tumor is assigned to the lobe it overlaps most. Outputs are OBJ meshes for 3D Slicer, a decimated web bundle for an interactive viewer, and a JSON report with lobe volumes, airway statistics and tumor location."
+},
+{
+"t": "h2",
+"text": "3.10. Evaluation metrics"
+},
+{
+"t": "p",
+"text": "All metrics are computed on the native CT grid against the original expert label [25]. We report Dice, the 95th-percentile Hausdorff distance (HD95, mm, using physical spacing), voxel sensitivity and precision, and volume agreement. Lesion-level detection counts connected components of at least 3 mm equivalent diameter on both sides. The expert labels contain annotation specks of 1\u201310 voxels, which we do not treat as lesions. A lesion counts as detected only if the prediction covers more than 10% of it; our first evaluation used any overlap, which counted a 1% touch of a 151 mL tumor as a hit. False positives are predicted components that touch no expert voxel. Clinically oriented agreement uses the RECIST-style longest axial diameter [4] of the largest component on each side, and lobe localisation (same lobe for expert and predicted tumor)."
+},
+{
+"t": "h2",
+"text": "3.11. False-success controls"
+},
+{
+"t": "bullets",
+"items": [
+"Empty prediction: must score Dice 0 and infinite HD95. This verifies that the metrics do not silently return 0 or NaN.",
+"Intensity-threshold baseline: soft tissue (\u2212300 to 200 HU) inside the closed lung hull but outside aerated lung, largest component. This is what a trivial rule achieves.",
+"Shuffled-label control: each patient's prediction is scored against another patient's label. A high value would mean the metric rewards generic tumor-like blobs.",
+"Resampling ceiling: the expert label is sent through our 1.5 mm pipeline and back. This is the best Dice any model could reach given our preprocessing.",
+"Untrained-network and constant-predictor controls, metric edge cases, split disjointness, geometric correctness and inference equivalence, enforced by an automated test suite (36 passed, 0 failed)."
+]
+},
+{
+"t": "h2",
+"text": "3.12. Statistical analysis"
+},
+{
+"t": "p",
+"text": "Per-patient metrics are summarised by the mean with a nonparametric patient-level bootstrap 95% confidence interval (5000 resamples) [30]. Paired comparisons use per-patient differences with bootstrap CIs and the two-sided Wilcoxon signed-rank test [32]. Measurement agreement uses Bland\u2013Altman bias and 95% limits of agreement [31]. We did not correct for multiple comparisons and treat p-values as descriptive, emphasising interval estimates."
+},
+{
+"t": "h1",
+"text": "4. Experimental Results and Discussion"
+},
+{
+"t": "h2",
+"text": "4.1. Experiment 1: Baseline segmentation"
+},
+{
+"t": "p",
+"text": "Compact 3D U-Net with default post-processing, evaluated on the held-out development split (13 patients), compared against the intensity-threshold baseline and the empty prediction."
+},
+{
+"t": "h2",
+"text": "4.2. Experiment 2: Post-processing analysis"
+},
+{
+"t": "p",
+"text": "Candidate post-processing rules compared on validation patients only. The selected rule is then applied unchanged to the test data and compared with the default rule on the same patients."
+},
+{
+"t": "h2",
+"text": "4.3. Experiment 3: Anatomical lung representation"
+},
+{
+"t": "p",
+"text": "The same network, split, seed and schedule are retrained with the lung class defined as the union of the five TotalSegmentator lobes (which include the tumor bed) instead of the air threshold. Post-processing is again selected on validation data, and the comparison with the original model is paired, patient by patient."
+},
+{
+"t": "h2",
+"text": "4.4. Experiment 4: Tumor-size stratification"
+},
+{
+"t": "p",
+"text": "Patients are grouped into tertiles of expert tumor volume. Dice and the resampling ceiling are reported per group."
+},
+{
+"t": "h2",
+"text": "4.5. Experiment 5: Failure analysis"
+},
+{
+"t": "p",
+"text": "The worst-performing patients are inspected quantitatively (composition of the raw prediction inside the expert tumor) and visually. The largest false-positive components are characterised by volume and location."
+},
+{
+"t": "h2",
+"text": "4.6. Experiment 6: Anatomy reconstruction"
+},
+{
+"t": "p",
+"text": "Full anatomy reconstructions of held-out patients, with lobe volumes, airway-tree statistics and the predicted tumor in context. Tumor lobe localisation and diameter agreement are evaluated over all test patients."
+},
+{
+"t": "h2",
+"text": "4.7. Segmentation performance"
+},
+{
+"t": "table",
+"caption": [
+{
+"text": "Table 1. ",
+"bold": true
+},
+{
+"text": "Tumor segmentation on the held-out development split (13 patients). Mean with patient-level bootstrap 95% CI; HD95 in mm. Lesion-level metrics count components \u22653 mm equivalent diameter; detection requires >10% coverage."
+}
+],
+"header": [
+"Method",
+"Dice",
+"HD95 (mm)",
+"Sensitivity",
+"Precision",
+"Lesion sens.",
+"FP/scan",
+"Case det."
+],
+"rows": [
+[
+"Compact 3D U-Net, default",
+"0.610 [0.450, 0.736]",
+"76.9 [39.6, 119.2]",
+"0.695 [0.505, 0.851]",
+"0.609 [0.481, 0.709]",
+"0.79",
+"1.92",
+"0.85"
+],
+[
+"Compact 3D U-Net, largest comp.",
+"0.658 [0.485, 0.787]",
+"15.2 [4.2, 29.4]",
+"0.691 [0.504, 0.846]",
+"0.731 [0.587, 0.845]",
+"0.79",
+"0.08",
+"0.85"
+],
+[
+"HU-threshold baseline",
+"0.041 [0.000, 0.113]",
+"113.7 [86.9, 138.5]",
+"0.025 [0.000, 0.069]",
+"0.152 [0.000, 0.381]",
+"0.07",
+"0.85",
+"0.08"
+],
+[
+"Empty prediction",
+"0.000 [0.000, 0.000]",
+"\u221e",
+"0.000 [0.000, 0.000]",
+"n/a",
+"0.00",
+"0.00",
+"0.00"
+]
+],
+"widths": [
+0.22,
+0.13,
+0.12,
+0.13,
+0.13,
+0.09,
+0.08,
+0.1
+]
+},
+{
+"t": "p",
+"text": "The compact model reached a tumor Dice of 0.610 (95% CI 0.450\u20130.736) and detected the tumor in 11 of 13 patients (Table 1). The median Dice was 0.722, reflecting a skewed distribution with a few near-complete failures (Fig. 2). The intensity-threshold baseline reached only 0.041, confirming that the task is not solvable by intensity alone. For context, nnU-Net reported roughly 0.7 on the official hidden test set [12, 14]. That figure comes from a different test set, obtained with far more compute and model ensembling, so the two numbers cannot be ranked against each other."
+},
+{
+"t": "img",
+"path": "paper/journal/fig/fig_per_case.png",
+"width": 1.0,
+"caption": [
+{
+"text": "Fig. 2. ",
+"bold": true
+},
+{
+"text": "Per-patient tumor Dice (default post-processing) and intensity-threshold baseline; black ticks mark each patient's resampling ceiling."
+}
+]
+},
+{
+"t": "img",
+"path": "paper/fig/fig_training.png",
+"width": 0.55,
+"caption": [
+{
+"text": "Fig. 3. ",
+"bold": true
+},
+{
+"text": "Training loss and validation score (mean of lung and tumor Dice) for the development run."
+}
+]
+},
+{
+"t": "h2",
+"text": "4.8. False-success analysis"
+},
+{
+"t": "table",
+"caption": [
+{
+"text": "Table 2. ",
+"bold": true
+},
+{
+"text": "False-success controls. A trustworthy result must lie well above the controls and below the ceiling."
+}
+],
+"header": [
+"Check",
+"Tumor Dice",
+"Interpretation"
+],
+"rows": [
+[
+"Model vs. expert (default)",
+"0.610 [0.450, 0.736]",
+"main result"
+],
+[
+"Model vs. expert (largest comp.)",
+"0.658 [0.485, 0.787]",
+"validation-selected rule"
+],
+[
+"Model vs. another patient's label",
+"0.000 [0.000, 0.000]",
+"\u22480 required (development split)"
+],
+[
+"Resampling ceiling",
+"0.946 [0.935, 0.957]",
+"upper bound from our preprocessing"
+],
+[
+"HU-threshold baseline",
+"0.041 [0.000, 0.113]",
+"trivial intensity rule"
+],
+[
+"Empty prediction",
+"0.000 [0.000, 0.000]",
+"must be exactly 0"
+]
+],
+"widths": [
+0.36,
+0.26,
+0.38
+]
+},
+{
+"t": "p",
+"text": "All controls behaved as required (Table 2). The shuffled-label control scored 0.000, so the metric rewards patient-specific localisation. The ceiling of 0.946 shows that resampling alone costs a few Dice points, most for small tumors. Three false-success mechanisms were caught during development and corrected before reporting. (i) Counting 1\u201310-voxel annotation specks as lesions had deflated lesion sensitivity. (ii) Any-overlap matching counted a 1% touch of a 151 mL tumor as a detection. (iii) Case specificity was reported as 0 when it is undefined, because every scan contains a tumor. A fourth, pipeline-level error was found in the ablation: evaluation scripts read a hard-coded preprocessing directory, silently feeding the ablation model the wrong inputs. It is now covered by a regression test."
+},
+{
+"t": "h2",
+"text": "4.9. Post-processing results"
+},
+{
+"t": "p",
+"text": "On validation data the largest-component rule raised Dice from 0.723 to 0.731 and removed false positives (2.8 \u2192 0.0 per scan). On the test data it gave Dice 0.658 (95% CI 0.485\u20130.787) against 0.610 (95% CI 0.450\u20130.736) for the default rule, with 0.08 against 1.92 false-positive components per scan and HD95 of 15.2 against 76.9 mm. Lesion sensitivity was unchanged in this cohort. However, the rule by construction discards any second lesion, so it suits single-tumor settings such as MSD but not multifocal disease."
+},
+{
+"t": "h2",
+"text": "4.10. Volume agreement"
+},
+{
+"t": "p",
+"text": "Predicted and expert tumor volumes are compared in Fig. 4. With default post-processing the Pearson correlation was 0.39 and the mean absolute volume error 16.9 (95% CI 1.8\u201341.3) mL. The corresponding values for the largest-component rule were 0.40 and 15.9 (95% CI 2.0\u201339.9) mL. Correlation is dominated by the few largest tumors, so a single large miss lowers it markedly."
+},
+{
+"t": "img",
+"path": "paper/journal/fig/fig_volume.png",
+"width": 0.5,
+"caption": [
+{
+"text": "Fig. 4. ",
+"bold": true
+},
+{
+"text": "Predicted versus expert tumor volume (largest-component rule), log\u2013log axes; the line is identity."
+}
+]
+},
+{
+"t": "p",
+"text": "For the clinically used RECIST-style longest axial diameter [4], the bias was -11.0 mm (95% limits of agreement -54.2 to 32.1 mm), the median absolute error 4.6 mm, and 54% of predictions were within 5 mm of the expert measurement (Fig. 5). The predicted tumor was assigned to the same lobe as the expert tumor in 92% of patients (12/13)."
+},
+{
+"t": "img",
+"path": "paper/journal/fig/fig_agreement.png",
+"width": 1.0,
+"caption": [
+{
+"text": "Fig. 5. ",
+"bold": true
+},
+{
+"text": "Longest axial diameter: predicted versus expert (left) and Bland\u2013Altman plot (right; solid line = bias, dashed = 95% limits of agreement)."
+}
+]
+},
+{
+"t": "h2",
+"text": "4.11. Tumor-size analysis"
+},
+{
+"t": "table",
+"caption": [
+{
+"text": "Table 3. ",
+"bold": true
+},
+{
+"text": "Tumor-size stratification (tertiles of expert volume)."
+}
+],
+"header": [
+"Stratum",
+"n",
+"Dice (default)",
+"Dice (largest comp.)",
+"Resampling ceiling"
+],
+"rows": [
+[
+"small (0.0\u20133.5 mL)",
+"4",
+"0.512 [0.179, 0.718]",
+"0.594 [0.201, 0.807]",
+"0.923 [0.913, 0.931]"
+],
+[
+"medium (3.5\u201312.7 mL)",
+"5",
+"0.723 [0.633, 0.802]",
+"0.758 [0.698, 0.818]",
+"0.947 [0.936, 0.959]"
+],
+[
+"large (12.7\u2013\u221e mL)",
+"4",
+"0.568 [0.193, 0.770]",
+"0.596 [0.198, 0.829]",
+"0.966 [0.954, 0.975]"
+]
+],
+"widths": [
+0.28,
+0.07,
+0.22,
+0.22,
+0.21
+]
+},
+{
+"t": "p",
+"text": "Dice by stratum was 0.51 (small), 0.72 (medium) and 0.57 (large) (Table 3, Fig. 6).  The confidence intervals overlap, so the data do not show a clear size effect. The resampling ceiling rises with size (0.923 \u2192 0.966), so our 1.5 mm grid costs most on small tumors. Large tumors were not easier for the model than medium ones."
+},
+{
+"t": "img",
+"path": "paper/journal/fig/fig_strata.png",
+"width": 0.65,
+"caption": [
+{
+"text": "Fig. 6. ",
+"bold": true
+},
+{
+"text": "Tumor Dice by size tertile with bootstrap 95% CIs; black ticks show the resampling ceiling."
+}
+]
+},
+{
+"t": "h2",
+"text": "4.12. Failure analysis"
+},
+{
+"t": "p",
+"text": "The largest tumor in the development split (lung_028, 151 mL) was essentially missed. Inside the expert tumor the raw network output was 76% background, 23% lung and 1% tumor. On inspection (Fig. 7) it is a posterior mass against the chest wall and spine, with soft-tissue density continuous with the tissue outside the lung. Our lung class is defined by aerated lung, so during training such tissue resembles the background class."
+},
+{
+"t": "img",
+"path": "paper/fig/fig_failure.png",
+"width": 1.0,
+"caption": [
+{
+"text": "Fig. 7. ",
+"bold": true
+},
+{
+"text": "Failure case on the 1.5 mm grid. Orange: expert tumor; cyan: predicted tumor; blue: threshold-derived lung label."
+}
+]
+},
+{
+"t": "table",
+"caption": [
+{
+"text": "Table 4. ",
+"bold": true
+},
+{
+"text": "Experiment 3, anatomical lung class (v2) versus threshold lung class (v1), on the same development test patients. Paired difference = v2 \u2212 v1 per patient (bootstrap 95% CI; Wilcoxon signed-rank p)."
+}
+],
+"header": [
+"Model / post-processing",
+"Dice",
+"FP/scan",
+"Lesion sens.",
+"Paired diff.",
+"p"
+],
+"rows": [
+[
+"v1, default",
+"0.610 [0.450, 0.736]",
+"1.92",
+"0.79",
+"\u2013",
+"\u2013"
+],
+[
+"v2, default",
+"0.543 [0.398, 0.669]",
+"2.15",
+"0.86",
+"-0.068 [-0.184, 0.039]",
+"0.38"
+],
+[
+"v1, largest comp.",
+"0.658 [0.485, 0.787]",
+"0.08",
+"0.79",
+"\u2013",
+"\u2013"
+],
+[
+"v2, largest comp.",
+"0.473 [0.273, 0.649]",
+"0.46",
+"0.64",
+"-0.185 [-0.378, -0.015]",
+"0.08"
+]
+],
+"widths": [
+0.24,
+0.22,
+0.1,
+0.12,
+0.22,
+0.1
+]
+},
+{
+"t": "p",
+"text": "To test H3 we retrained with the anatomical lung class (Experiment 3). Validation performance improved (best score 0.874 against 0.853), but test performance did not (Table 4). The paired Dice difference was -0.068 [-0.184, 0.039] with default post-processing and -0.185 [-0.378, -0.015] with the largest-component rule. The targeted failure improved only partly (lung_028: Dice 0.01 \u2192 0.24). The cost was large false positives. In 4 of 13 patients v2's largest component missed the expert tumor (v1: 1), so the largest-component rule discarded the true tumor. The largest of these components measured 58 mL, 68 mL, 4 mL, and 2 of them lay within 50 mm of the tracheal midline. That position is compatible with hilar or mediastinal soft tissue, which the lobe masks partly include; we infer this from coordinates and did not verify it visually. H3 is therefore not supported, and the case also shows how a five-patient validation set can mislead model selection."
+},
+{
+"t": "h2",
+"text": "4.13. Anatomy-level reconstruction"
+},
+{
+"t": "table",
+"caption": [
+{
+"text": "Table 5. ",
+"bold": true
+},
+{
+"text": "Anatomy reconstructions of held-out patients. Lung volume in L; airway, artery and vein volumes in mL."
+}
+],
+"header": [
+"Case",
+"Lung",
+"Lobes",
+"Airway",
+"Branch pts",
+"Endpoints",
+"Max gen.",
+"Arteries",
+"Veins",
+"Tumor lobe",
+"U-Net Dice"
+],
+"rows": [
+[
+"lung_014",
+"7.22",
+"5",
+"74",
+"169",
+"125",
+"16",
+"287",
+"281",
+"upper lobe right",
+"0.852"
+],
+[
+"lung_075",
+"9.85",
+"5",
+"78",
+"13",
+"8",
+"12",
+"\u2013",
+"\u2013",
+"upper lobe left",
+"0.878"
+]
+],
+"widths": [
+0.1,
+0.07,
+0.07,
+0.08,
+0.09,
+0.09,
+0.08,
+0.08,
+0.07,
+0.15,
+0.12
+]
+},
+{
+"t": "p",
+"text": "Fig. 8 shows reconstructions of held-out patients, with all structures in patient RAS coordinates, and Table 5 summarises the derived anatomy. In lung_014 the predicted tumor reached Dice 0.85 and was assigned to the same lobe as the expert tumor. In lung_075 the predicted tumor reached Dice 0.88 and was assigned to the same lobe as the expert tumor. lung_075 has a lung volume above the usual adult range; an independent air-threshold estimate agrees, so it reflects the image as stored, but a slice-spacing error in the header cannot be excluded. Airway generation counts above about 10 exceed what CT normally resolves and probably reflect skeleton loops rather than true branching. We report them as approximate. The anatomy labels come from TotalSegmentator and were not checked against expert annotations in this study."
+},
+{
+"t": "img",
+"path": "paper/fig/lung_014_A.png",
+"width": 0.62,
+"caption": [
+{
+"text": "Fig. 8. ",
+"bold": true
+},
+{
+"text": "Held-out patient lung_014: lobes (translucent), airway tree with pruned centreline and endpoints (green, red spheres), expert tumor (orange) and predicted tumor (yellow)."
+}
+]
+},
+{
+"t": "img",
+"path": "paper/fig/lung_014_A_vessels.png",
+"width": 0.62,
+"caption": [
+{
+"text": "Fig. 9. ",
+"bold": true
+},
+{
+"text": "The same patient with pulmonary arteries (blue) and veins (red)."
+}
+]
+},
+{
+"t": "img",
+"path": "paper/fig/lung_014_tumor.png",
+"width": 0.62,
+"caption": [
+{
+"text": "Fig. 10. ",
+"bold": true
+},
+{
+"text": "Close-up: predicted tumor (yellow wireframe) over the expert tumor (orange), with the bronchus leading to it."
+}
+]
+},
+{
+"t": "h1",
+"text": "5. Conclusions"
+},
+{
+"t": "p",
+"text": "A compact 3D U-Net trained entirely on a CPU reached a tumor Dice of 0.61 (default) and 0.66 (validation-selected post-processing) on the MSD lung task. It was far above an intensity baseline and all negative controls, and below the ceiling set by its own preprocessing. This supports H1 and H2 within the limits below. The anatomy-aware pipeline turns each scan into a patient-space 3D model with lobes, airway tree, vessels and tumor, together with clinically meaningful measurements. The anatomical-lung ablation (H3) was a negative result, and we report it as such. Limitations: the cohort is small and comes from a single public dataset; there is no external validation; anatomy labels are automated and not expert-verified; the lung class is threshold-derived; the model does not distinguish malignant from benign disease; and a GPU-scale comparison with nnU-Net on identical folds is provided as a script but was not run. Future work will add external validation (NSCLC-Radiomics, LIDC-IDRI), the nnU-Net comparison, expert review of the reconstructed anatomy, and explicit suppression of hilar false positives for anatomical lung representations."
+},
+{
+"t": "h2",
+"text": "Data and code availability"
+},
+{
+"t": "p",
+"text": "All experiments use the public, de-identified MSD Task06 data, so no ethics approval was required. Code, automated tests, result files, the interactive viewer and this manuscript generator are available in the project repository."
+},
+{
+"t": "h1",
+"text": "References"
+},
+{
+"t": "refs",
+"items": [
+"Bray F, Laversanne M, Sung H, et al. Global cancer statistics 2022: GLOBOCAN estimates of incidence and mortality worldwide for 36 cancers in 185 countries. CA Cancer J Clin. 2024;74(3):229\u2013263.",
+"National Lung Screening Trial Research Team. Reduced lung-cancer mortality with low-dose computed tomographic screening. N Engl J Med. 2011;365(5):395\u2013409.",
+"de Koning HJ, van der Aalst CM, de Jong PA, et al. Reduced lung-cancer mortality with volume CT screening in a randomized trial. N Engl J Med. 2020;382(6):503\u2013513.",
+"Eisenhauer EA, Therasse P, Bogaerts J, et al. New response evaluation criteria in solid tumours: revised RECIST guideline (version 1.1). Eur J Cancer. 2009;45(2):228\u2013247.",
+"Litjens G, Kooi T, Bejnordi BE, et al. A survey on deep learning in medical image analysis. Med Image Anal. 2017;42:60\u201388.",
+"Ronneberger O, Fischer P, Brox T. U-Net: convolutional networks for biomedical image segmentation. In: MICCAI. 2015:234\u2013241.",
+"\u00c7i\u00e7ek \u00d6, Abdulkadir A, Lienkamp SS, Brox T, Ronneberger O. 3D U-Net: learning dense volumetric segmentation from sparse annotation. In: MICCAI. 2016:424\u2013432.",
+"Milletari F, Navab N, Ahmadi SA. V-Net: fully convolutional neural networks for volumetric medical image segmentation. In: 3DV. 2016:565\u2013571.",
+"Zhou Z, Siddiquee MMR, Tajbakhsh N, Liang J. UNet++: a nested U-Net architecture for medical image segmentation. In: DLMIA. 2018:3\u201311.",
+"Oktay O, Schlemper J, Le Folgoc L, et al. Attention U-Net: learning where to look for the pancreas. arXiv:1804.03999. 2018.",
+"Hatamizadeh A, Tang Y, Nath V, et al. UNETR: transformers for 3D medical image segmentation. In: WACV. 2022:574\u2013584.",
+"Isensee F, Jaeger PF, Kohl SAA, Petersen J, Maier-Hein KH. nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation. Nat Methods. 2021;18(2):203\u2013211.",
+"Isensee F, Wald T, Ulrich C, et al. nnU-Net revisited: a call for rigorous validation in 3D medical image segmentation. In: MICCAI. 2024.",
+"Antonelli M, Reinke A, Bakas S, et al. The Medical Segmentation Decathlon. Nat Commun. 2022;13:4128.",
+"Armato SG 3rd, McLennan G, Bidaut L, et al. The Lung Image Database Consortium (LIDC) and Image Database Resource Initiative (IDRI): a completed reference database of lung nodules on CT scans. Med Phys. 2011;38(2):915\u2013931.",
+"Setio AAA, Traverso A, de Bel T, et al. Validation, comparison, and combination of algorithms for automatic detection of pulmonary nodules in computed tomography images: the LUNA16 challenge. Med Image Anal. 2017;42:1\u201313.",
+"Aerts HJWL, Velazquez ER, Leijenaar RTH, et al. Decoding tumour phenotype by noninvasive imaging using a quantitative radiomics approach. Nat Commun. 2014;5:4006.",
+"Hofmanninger J, Prayer F, Pan J, R\u00f6hrich S, Prosch H, Langs G. Automatic lung segmentation in routine imaging is primarily a data diversity problem, not a methodology problem. Eur Radiol Exp. 2020;4:50.",
+"Wasserthal J, Breit HC, Meyer MT, et al. TotalSegmentator: robust segmentation of 104 anatomic structures in CT images. Radiol Artif Intell. 2023;5(5):e230024.",
+"Fedorov A, Beichel R, Kalpathy-Cramer J, et al. 3D Slicer as an image computing platform for the Quantitative Imaging Network. Magn Reson Imaging. 2012;30(9):1323\u20131341.",
+"Lorensen WE, Cline HE. Marching cubes: a high resolution 3D surface construction algorithm. ACM SIGGRAPH Comput Graph. 1987;21(4):163\u2013169.",
+"Taubin G. A signal processing approach to fair surface design. In: SIGGRAPH. 1995:351\u2013358.",
+"Lee TC, Kashyap RL, Chu CN. Building skeleton models via 3-D medial surface/axis thinning algorithms. CVGIP Graph Models Image Process. 1994;56(6):462\u2013478.",
+"Weibel ER. Morphometry of the Human Lung. Berlin: Springer; 1963.",
+"Maier-Hein L, Reinke A, Godau P, et al. Metrics reloaded: recommendations for image analysis validation. Nat Methods. 2024;21(2):195\u2013212.",
+"Reinke A, Tizabi MD, Baumgartner M, et al. Understanding metric-related pitfalls in image analysis validation. Nat Methods. 2024;21(2):182\u2013194.",
+"Varoquaux G, Cheplygina V. Machine learning for medical imaging: methodological failures and recommendations for the future. NPJ Digit Med. 2022;5:48.",
+"Kapoor S, Narayanan A. Leakage and the reproducibility crisis in machine-learning-based science. Patterns. 2023;4(9):100804.",
+"Mongan J, Moy L, Kahn CE Jr. Checklist for Artificial Intelligence in Medical Imaging (CLAIM): a guide for authors and reviewers. Radiol Artif Intell. 2020;2(2):e200029.",
+"Efron B, Tibshirani RJ. An Introduction to the Bootstrap. New York: Chapman & Hall; 1993.",
+"Bland JM, Altman DG. Statistical methods for assessing agreement between two methods of clinical measurement. Lancet. 1986;1(8476):307\u2013310.",
+"Wilcoxon F. Individual comparisons by ranking methods. Biometrics Bull. 1945;1(6):80\u201383."
+]
+}
+]

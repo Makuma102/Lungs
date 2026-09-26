@@ -3,3 +3,5 @@ data/
 __pycache__/
 *.log
 .pytest_cache/
+results/*/pred_cache/
+results/cv/*/pred_cache/

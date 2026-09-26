@@ -1,0 +1,891 @@
+{
+ "summary": {
+  "n_test": 13,
+  "n_train": 45,
+  "test_cases": [
+   "lung_044",
+   "lung_055",
+   "lung_029",
+   "lung_038",
+   "lung_014",
+   "lung_028",
+   "lung_043",
+   "lung_078",
+   "lung_096",
+   "lung_059",
+   "lung_075",
+   "lung_009",
+   "lung_093"
+  ],
+  "params": 3176799,
+  "ours": {
+   "dice": [
+    0.6104774758797837,
+    0.4495792871562927,
+    0.7362395181711401
+   ],
+   "hd95": [
+    76.94359934296328,
+    39.57964497763267,
+    119.21348293702016
+   ],
+   "sens": [
+    0.6948422145022269,
+    0.5052753335536027,
+    0.8511187275505001
+   ],
+   "prec": [
+    0.6093002031349345,
+    0.4812910339365464,
+    0.7091992152429704
+   ],
+   "lesion_sensitivity": 0.7857142857142857,
+   "fp_per_scan": 1.9230769230769231,
+   "case_detection_rate": 0.8461538461538461,
+   "volume_abs_err_ml": [
+    16.92545630770234,
+    1.791271844078027,
+    41.33088189868731
+   ],
+   "volume_pearson_r": 0.3912102782231755
+  },
+  "threshold": {
+   "dice": [
+    0.04121657820627673,
+    0.0,
+    0.11341661652755296
+   ],
+   "hd95": [
+    113.65541810719768,
+    86.8554884726162,
+    138.46524828451132
+   ],
+   "sens": [
+    0.024967297214958058,
+    0.0,
+    0.06942075320949007
+   ],
+   "prec": [
+    0.1524969155554969,
+    0.0,
+    0.3805676697434138
+   ],
+   "lesion_sensitivity": 0.07142857142857142,
+   "fp_per_scan": 0.8461538461538461,
+   "case_detection_rate": 0.07692307692307693,
+   "volume_abs_err_ml": [
+    27.297664575588247,
+    8.21026271810652,
+    52.91765920308338
+   ],
+   "volume_pearson_r": -0.18797204905182419
+  },
+  "empty": {
+   "dice": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "hd95": [
+    NaN,
+    NaN,
+    NaN
+   ],
+   "sens": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "prec": [
+    NaN,
+    NaN,
+    NaN
+   ],
+   "lesion_sensitivity": 0.0,
+   "fp_per_scan": 0.0,
+   "case_detection_rate": 0.0,
+   "volume_abs_err_ml": [
+    26.63571916170074,
+    7.529440242888778,
+    52.93562689531102
+   ],
+   "volume_pearson_r": NaN
+  },
+  "ours_sel": {
+   "dice": [
+    0.6577711814540735,
+    0.4852517680305151,
+    0.7873214747101017
+   ],
+   "hd95": [
+    15.162441274028847,
+    4.192374234445024,
+    29.394271189002122
+   ],
+   "sens": [
+    0.6913925469554817,
+    0.5040025048024105,
+    0.846270253115958
+   ],
+   "prec": [
+    0.7305836586836709,
+    0.587264720511068,
+    0.8450920440844677
+   ],
+   "lesion_sensitivity": 0.7857142857142857,
+   "fp_per_scan": 0.07692307692307693,
+   "case_detection_rate": 0.8461538461538461,
+   "volume_abs_err_ml": [
+    15.901954289601402,
+    2.049458150224503,
+    39.862111623838196
+   ],
+   "volume_pearson_r": 0.3968098771845652
+  },
+  "selected_rule": {
+   "min_tumor_mm3": 20,
+   "min_mean_prob": 0.0,
+   "largest_only": true
+  },
+  "shuffled_gt_dice": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "resampling_ceiling_dice": [
+   0.9456647322834724,
+   0.9349800374875451,
+   0.9573154990450983
+  ]
+ },
+ "cases": [
+  {
+   "case": "lung_044",
+   "ours": {
+    "dice": 0.7280256270021095,
+    "hd95": 166.72928536493356,
+    "sens": 0.6801459854014599,
+    "prec": 0.7831568330811901,
+    "tp": 1,
+    "fn": 0,
+    "fp": 3,
+    "vol_gt_ml": 12.60239809155464,
+    "vol_pred_ml": 10.944768795132637,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 12.60239809155464,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.7748212206885082,
+    "hd95": 5.340003202470796,
+    "sens": 0.6801459854014599,
+    "prec": 0.9001159196290572,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 12.60239809155464,
+    "vol_pred_ml": 9.522629565238953,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 61.11224280714399,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 12.60239809155464,
+    "vol_pred_ml": 0.2833239862918854,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9416055704969973
+  },
+  {
+   "case": "lung_055",
+   "ours": {
+    "dice": 0.7816293369866505,
+    "hd95": 9.877864811035815,
+    "sens": 0.7190843274613828,
+    "prec": 0.8560910074327389,
+    "tp": 1,
+    "fn": 0,
+    "fp": 2,
+    "vol_gt_ml": 28.578580932199955,
+    "vol_pred_ml": 24.004935773193836,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 28.578580932199955,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.7596136382399076,
+    "hd95": 18.57675374023525,
+    "sens": 0.6742386493536946,
+    "prec": 0.8697444041137327,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 28.578580932199955,
+    "vol_pred_ml": 22.15453611087799,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.1330305351866039,
+    "hd95": 29.147414866514612,
+    "sens": 0.07125479965999355,
+    "prec": 1.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 28.578580932199955,
+    "vol_pred_ml": 2.0363610588908196,
+    "detected": false,
+    "touched": true
+   },
+   "ceiling_dice": 0.9477877531891211
+  },
+  {
+   "case": "lung_029",
+   "ours": {
+    "dice": 0.6796591733139956,
+    "hd95": 3.9220974360665655,
+    "sens": 0.9554026503567788,
+    "prec": 0.5274338773213281,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 3.4943653049468995,
+    "vol_pred_ml": 6.329752443313598,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 3.4943653049468995,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.6796591733139956,
+    "hd95": 3.9220974360665655,
+    "sens": 0.9554026503567788,
+    "prec": 0.5274338773213281,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 3.4943653049468995,
+    "vol_pred_ml": 6.329752443313598,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 85.8817619572056,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 3.4943653049468995,
+    "vol_pred_ml": 0.4657372717857361,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9292024068621175
+  },
+  {
+   "case": "lung_038",
+   "ours": {
+    "dice": 0.5704268292682927,
+    "hd95": 204.11742185206373,
+    "sens": 0.5469161064016369,
+    "prec": 0.5960496973558458,
+    "tp": 1,
+    "fn": 0,
+    "fp": 5,
+    "vol_gt_ml": 5.22003173828125,
+    "vol_pred_ml": 4.78973388671875,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 5.22003173828125,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.6790056251134096,
+    "hd95": 5.196340358848715,
+    "sens": 0.5469161064016369,
+    "prec": 0.8952153110047847,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 5.22003173828125,
+    "vol_pred_ml": 3.1890869140625,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 132.02098701886908,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 5.22003173828125,
+    "vol_pred_ml": 11.4898681640625,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9659224441833137
+  },
+  {
+   "case": "lung_014",
+   "ours": {
+    "dice": 0.7367557708237272,
+    "hd95": 174.49149435428774,
+    "sens": 0.9982639464808979,
+    "prec": 0.5838172717513613,
+    "tp": 1,
+    "fn": 0,
+    "fp": 3,
+    "vol_gt_ml": 31.134679213911294,
+    "vol_pred_ml": 53.23691032856703,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 31.134679213911294,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.8518480076241519,
+    "hd95": 3.3191655365818504,
+    "sens": 0.9982639464808979,
+    "prec": 0.7428881775466373,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 31.134679213911294,
+    "vol_pred_ml": 41.83755871191621,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.40278498149499353,
+    "hd95": 21.875,
+    "sens": 0.25332006413446123,
+    "prec": 0.9824599022214598,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 31.134679213911294,
+    "vol_pred_ml": 8.0278481772542,
+    "detected": true,
+    "touched": true
+   },
+   "ceiling_dice": 0.9681092268587397
+  },
+  {
+   "case": "lung_028",
+   "ours": {
+    "dice": 0.008512423537054078,
+    "hd95": 73.17409232507431,
+    "sens": 0.004286493117077825,
+    "prec": 0.6024904214559387,
+    "tp": 0,
+    "fn": 1,
+    "fp": 3,
+    "vol_gt_ml": 151.3409661602974,
+    "vol_pred_ml": 1.0767341465950013,
+    "detected": false,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 151.3409661602974,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.008536395035590932,
+    "hd95": 72.7255488417275,
+    "sens": 0.004286493117077825,
+    "prec": 1.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 151.3409661602974,
+    "vol_pred_ml": 0.6487220097780229,
+    "detected": false,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 154.07837218814,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 151.3409661602974,
+    "vol_pred_ml": 0.9251250282526017,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9743460456115726
+  },
+  {
+   "case": "lung_043",
+   "ours": {
+    "dice": 0.7154348919054802,
+    "hd95": 51.25901200004293,
+    "sens": 0.7442468619246861,
+    "prec": 0.6887705711519845,
+    "tp": 1,
+    "fn": 0,
+    "fp": 2,
+    "vol_gt_ml": 2.8306106643676756,
+    "vol_pred_ml": 3.0585991802215573,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 2.8306106643676756,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.7627981774323238,
+    "hd95": 2.935764280582162,
+    "sens": 0.7442468619246861,
+    "prec": 0.7822979659153381,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 2.8306106643676756,
+    "vol_pred_ml": 2.692929287910461,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 98.02502095522928,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 2.8306106643676756,
+    "vol_pred_ml": 2.422007869720459,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9316708229426434
+  },
+  {
+   "case": "lung_078",
+   "ours": {
+    "dice": 0.7720200421940928,
+    "hd95": 2.550687733481251,
+    "sens": 0.9330677290836653,
+    "prec": 0.6583829978634881,
+    "tp": 1,
+    "fn": 0,
+    "fp": 1,
+    "vol_gt_ml": 5.664196065068245,
+    "vol_pred_ml": 8.027361849665642,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 5.664196065068245,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.7780213939273138,
+    "hd95": 2.4782607555389404,
+    "sens": 0.9330677290836653,
+    "prec": 0.6671604375569735,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 5.664196065068245,
+    "vol_pred_ml": 7.9217505445480345,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 122.78526696609207,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 5.664196065068245,
+    "vol_pred_ml": 0.21122261023521424,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9576990866848262
+  },
+  {
+   "case": "lung_096",
+   "ours": {
+    "dice": 0.0,
+    "hd95": 66.02322893820049,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 0.7377379506826401,
+    "vol_pred_ml": 0.7736320331692697,
+    "detected": false,
+    "touched": false
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 0.7377379506826401,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.0,
+    "hd95": 66.02322893820049,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 0.7377379506826401,
+    "vol_pred_ml": 0.7736320331692697,
+    "detected": false,
+    "touched": false
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 154.2768529587402,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 0.7377379506826401,
+    "vol_pred_ml": 28.633549673855306,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9303590859630033
+  },
+  {
+   "case": "lung_059",
+   "ours": {
+    "dice": 0.7215434083601286,
+    "hd95": 33.725801459853855,
+    "sens": 0.9024128686327078,
+    "prec": 0.6010714285714286,
+    "tp": 1,
+    "fn": 0,
+    "fp": 1,
+    "vol_gt_ml": 1.5615297108888626,
+    "vol_pred_ml": 2.3443877696990967,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 1.5615297108888626,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.8029580152671756,
+    "hd95": 1.6406240463256836,
+    "sens": 0.9024128686327078,
+    "prec": 0.7232488182208853,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 1.5615297108888626,
+    "vol_pred_ml": 1.9483536928892136,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 146.7373374261185,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 1.5615297108888626,
+    "vol_pred_ml": 0.21350674331188202,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.907182320441989
+  },
+  {
+   "case": "lung_075",
+   "ours": {
+    "dice": 0.8666242333063303,
+    "hd95": 4.073240197381736,
+    "sens": 0.8405544954540353,
+    "prec": 0.894362832915323,
+    "tp": 1,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 11.370135719299316,
+    "vol_pred_ml": 10.686064247131348,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 2,
+    "fp": 0,
+    "vol_gt_ml": 11.370135719299316,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.8780816697446722,
+    "hd95": 2.6815353561821778,
+    "sens": 0.8405544954540353,
+    "prec": 0.9191162933415158,
+    "tp": 1,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 11.370135719299316,
+    "vol_pred_ml": 10.3982692527771,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 178.6751881351977,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 2,
+    "fp": 1,
+    "vol_gt_ml": 11.370135719299316,
+    "vol_pred_ml": 0.42690654373168946,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9399604631460039
+  },
+  {
+   "case": "lung_009",
+   "ours": {
+    "dice": 0.7449680717738566,
+    "hd95": 22.813285175137278,
+    "sens": 0.8801210822193393,
+    "prec": 0.6457981251422699,
+    "tp": 1,
+    "fn": 0,
+    "fp": 1,
+    "vol_gt_ml": 89.47540438270569,
+    "vol_pred_ml": 121.94087698841095,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 89.47540438270569,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.7644609204036973,
+    "hd95": 9.801884647608333,
+    "sens": 0.8801210822193393,
+    "prec": 0.6756686537434505,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 89.47540438270569,
+    "vol_pred_ml": 116.55001205253602,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 128.8544875920657,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 89.47540438270569,
+    "vol_pred_ml": 3.1138995151519775,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9755985482918046
+  },
+  {
+   "case": "lung_093",
+   "ours": {
+    "dice": 0.6106073779654702,
+    "hd95": 187.5092798109634,
+    "sens": 0.8284462419952814,
+    "prec": 0.48347757671125097,
+    "tp": 1,
+    "fn": 0,
+    "fp": 2,
+    "vol_gt_ml": 2.253713167905808,
+    "vol_pred_ml": 3.861772074699402,
+    "detected": true,
+    "touched": true
+   },
+   "empty": {
+    "dice": 0.0,
+    "hd95": Infinity,
+    "sens": 0.0,
+    "prec": NaN,
+    "tp": 0,
+    "fn": 1,
+    "fp": 0,
+    "vol_gt_ml": 2.253713167905808,
+    "vol_pred_ml": 0.0,
+    "detected": false,
+    "touched": false
+   },
+   "ours_sel": {
+    "dice": 0.8112211221122112,
+    "hd95": 2.4705294220065466,
+    "sens": 0.8284462419952814,
+    "prec": 0.7946977044940188,
+    "tp": 1,
+    "fn": 0,
+    "fp": 0,
+    "vol_gt_ml": 2.253713167905808,
+    "vol_pred_ml": 2.3494219172000887,
+    "detected": true,
+    "touched": true
+   },
+   "threshold": {
+    "dice": 0.0,
+    "hd95": 164.0505025222533,
+    "sens": 0.0,
+    "prec": 0.0,
+    "tp": 0,
+    "fn": 1,
+    "fp": 1,
+    "vol_gt_ml": 2.253713167905808,
+    "vol_pred_ml": 3.0307770609855655,
+    "detected": false,
+    "touched": false
+   },
+   "ceiling_dice": 0.9241977450130096
+  }
+ ]
+}

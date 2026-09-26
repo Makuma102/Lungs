@@ -274,3 +274,14 @@ def test_scripts_use_the_checkpoints_own_preprocessing():
     import glob
     for f in glob.glob("scripts/*.py"):
         assert '"data/prep"' not in open(f).read(), f
+
+
+def test_kfold_partitions_every_case_once():
+    tests = []
+    for k in range(5):
+        a = _phantom_args(n_train=10, n_val=2, n_test=3, n_folds=5, fold=k)
+        load(a)
+        sp = a.split
+        assert not set(sp["test"]) & (set(sp["train"]) | set(sp["val"]))
+        tests += sp["test"]
+    assert sorted(tests) == list(range(15))

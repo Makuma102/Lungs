@@ -47,6 +47,11 @@ def load(args):
     n_te = max(1, round(len(vols) * args.n_test / (args.n_train + args.n_val + args.n_test)))
     n_va = max(1, round(len(vols) * args.n_val / (args.n_train + args.n_val + args.n_test)))
     te, va, tr = idx[:n_te], idx[n_te:n_te + n_va], idx[n_te + n_va:]
+    if getattr(args, "n_folds", 0):  # k-fold CV: fold k is the test set; validation = first n_va of the rest
+        folds = np.array_split(idx, args.n_folds)
+        te = folds[args.fold]
+        rest = np.concatenate([f for i, f in enumerate(folds) if i != args.fold])
+        va, tr = rest[:n_va], rest[n_va:]
     args.split = {"train": [int(i) for i in tr], "val": [int(i) for i in va], "test": [int(i) for i in te]}
     pick = lambda ii: ([vols[i] for i in ii], [spacings[i] for i in ii])
     return pick(tr), pick(va), pick(te)
@@ -117,6 +122,8 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--val-every", type=int, default=1)
+    ap.add_argument("--n-folds", type=int, default=0, help="k-fold CV (0 = single split)")
+    ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--resume", action="store_true", help="continue from <out>/last.pt if present")
     ap.add_argument("--stop-after", type=int, default=None, help=argparse.SUPPRESS)  # tests: simulate a crash
     args = ap.parse_args(argv)

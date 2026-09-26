@@ -1,8 +1,18 @@
-torch>=2.0
+# core
+torch>=2.7            # RTX 50-series (Blackwell) needs a CUDA 12.8+ build: pip install torch --index-url https://download.pytorch.org/whl/cu128
 numpy
 scipy
 scikit-image
 pillow
 nibabel
 pytest
-# optional: kaggle huggingface_hub
+matplotlib
+# anatomy + meshes
+totalsegmentator>=2.4
+pyfqmr
+# paper / figures
+playwright            # then: playwright install chromium
+pymupdf
+python-docx
+# optional baselines / data
+# nnunetv2  kaggle  huggingface_hub

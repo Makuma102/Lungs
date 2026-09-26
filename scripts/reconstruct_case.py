@@ -25,6 +25,7 @@ from lungseg.model import SmallUNet3D  # noqa: E402
 from lungseg.prep_msd import to_original_nifti  # noqa: E402
 from lungseg.reconstruct3d import postprocess, predict_volume  # noqa: E402
 
+TS_DEVICE = os.environ.get("TS_DEVICE", "cpu")  # set TS_DEVICE=gpu on a CUDA machine
 LOBE_ROI = ["lung_upper_lobe_left", "lung_lower_lobe_left", "lung_upper_lobe_right",
             "lung_middle_lobe_right", "lung_lower_lobe_right", "trachea"]
 
@@ -48,7 +49,7 @@ def totalseg(ct, anat, vessels=True):
     # all six outputs must exist: an interrupted run can leave a partial set
     if not all(os.path.exists(os.path.join(anat, "total", r + ".nii.gz")) for r in LOBE_ROI):
         subprocess.check_call(["TotalSegmentator", "-i", ct, "-o", os.path.join(anat, "total"), "--fast",
-                               "--roi_subset", *LOBE_ROI, "-d", "cpu",
+                               "--roi_subset", *LOBE_ROI, "-d", TS_DEVICE,
                                # multi-process saving deadlocked / left partial outputs in this container
                                "--nr_thr_resamp", "1", "--nr_thr_saving", "1"])
     out = os.path.join(anat, "vessels")
@@ -61,7 +62,7 @@ def totalseg(ct, anat, vessels=True):
         nib.save(img.slicer[lo[0]:hi[0], lo[1]:hi[1], lo[2]:hi[2]], crop_ct)
         tmp = os.path.join(anat, "vessels_crop")
         subprocess.check_call(["TotalSegmentator", "-i", crop_ct, "-o", tmp, "-ta", "lung_vessels",
-                               "-d", "cpu", "--nr_thr_resamp", "1", "--nr_thr_saving", "1"])
+                               "-d", TS_DEVICE, "--nr_thr_resamp", "1", "--nr_thr_saving", "1"])
         os.makedirs(out, exist_ok=True)
         for f in os.listdir(tmp):
             c = np.asanyarray(nib.load(os.path.join(tmp, f)).dataobj)

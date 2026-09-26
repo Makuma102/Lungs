@@ -122,6 +122,7 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--workers", type=int, default=0)
     ap.add_argument("--val-every", type=int, default=1)
+    ap.add_argument("--no-amp", action="store_true", help="disable mixed precision on GPU")
     ap.add_argument("--n-folds", type=int, default=0, help="k-fold CV (0 = single split)")
     ap.add_argument("--fold", type=int, default=0)
     ap.add_argument("--resume", action="store_true", help="continue from <out>/last.pt if present")
@@ -132,6 +133,8 @@ def main(argv=None):
         args.base = 12 if args.dim == 3 else 16
     seed_all(args.seed)
     torch.set_num_threads(max(1, os.cpu_count() or 1))
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
     device = "cuda" if torch.cuda.is_available() else "cpu"
     os.makedirs(args.out, exist_ok=True)
     (trv, trs), (vav, vas), (tev, tes) = load(args)
@@ -151,6 +154,8 @@ def main(argv=None):
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-4)
     sched = torch.optim.lr_scheduler.OneCycleLR(opt, args.lr, total_steps=args.epochs * len(dl))
 
+    use_amp = device == "cuda" and not args.no_amp  # mixed precision on GPU only; CPU path unchanged
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
     best, log, start = -1.0, [], 0
     last_p = os.path.join(args.out, "last.pt")
     if args.resume and os.path.exists(last_p):  # survive container restarts
@@ -173,10 +178,13 @@ def main(argv=None):
         model.train(); t0 = time.time(); tot = 0.0
         for x, y in dl:
             x, y = x.to(device), y.to(device)
-            loss = crit(model(x), y)
-            opt.zero_grad(); loss.backward()
+            opt.zero_grad()
+            with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=use_amp):
+                loss = crit(model(x), y)
+            scaler.scale(loss).backward()
+            scaler.unscale_(opt)
             torch.nn.utils.clip_grad_norm_(model.parameters(), 12.0)
-            opt.step(); sched.step(); tot += loss.item()
+            scaler.step(opt); scaler.update(); sched.step(); tot += loss.item()
         if (ep + 1) % args.val_every and ep != args.epochs - 1:
             print(f"ep {ep:3d} loss {tot / len(dl):.4f} ({time.time() - t0:.0f}s)", flush=True)
             log.append({"epoch": ep, "loss": tot / len(dl), "sec": time.time() - t0})

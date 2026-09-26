@@ -1,0 +1,1 @@
+reused original split (identical fold 0, deterministic: epoch-0 loss 1.1135 in both runs)
